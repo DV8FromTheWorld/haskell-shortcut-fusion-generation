@@ -1,0 +1,9 @@
+{-# LANGUAGE GADTs #-}
+
+data Expr a b where
+    Var :: a -> Expr a b
+    IConst :: Int -> Expr a Int
+    RConst :: Float -> Expr a Float
+    PProd :: Expr a b -> Expr a b -> Expr a b
+    SIMul :: Expr a b -> Int -> Expr a b
+    SRMul :: Expr a b -> Float -> Expr a Float

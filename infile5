@@ -1,0 +1,5 @@
+{-# LANGUAGE GADTs #-}
+
+data Fin a where
+    Fz :: Fin (S a)
+    Fs :: Fin a -> Fin (S a)

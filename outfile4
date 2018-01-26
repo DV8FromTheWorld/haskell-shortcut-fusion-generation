@@ -1,0 +1,509 @@
+GDataDecl
+  SrcSpanInfo
+    { srcInfoSpan = SrcSpan "infile4" 3 1 10 0
+    , srcInfoPoints =
+        [ SrcSpan "infile4" 3 15 3 20
+        , SrcSpan "infile4" 4 5 4 5
+        , SrcSpan "infile4" 5 5 5 5
+        , SrcSpan "infile4" 6 5 6 5
+        , SrcSpan "infile4" 7 5 7 5
+        , SrcSpan "infile4" 8 5 8 5
+        , SrcSpan "infile4" 9 5 9 5
+        , SrcSpan "infile4" 10 1 10 0
+        ]
+    }
+  (DataType
+     SrcSpanInfo
+       { srcInfoSpan = SrcSpan "infile4" 3 1 3 5 , srcInfoPoints = [] })
+  Nothing
+  (DHApp
+     SrcSpanInfo
+       { srcInfoSpan = SrcSpan "infile4" 3 6 3 14 , srcInfoPoints = [] }
+     (DHApp
+        SrcSpanInfo
+          { srcInfoSpan = SrcSpan "infile4" 3 6 3 12 , srcInfoPoints = [] }
+        (DHead
+           SrcSpanInfo
+             { srcInfoSpan = SrcSpan "infile4" 3 6 3 10 , srcInfoPoints = [] }
+           (Ident
+              SrcSpanInfo
+                { srcInfoSpan = SrcSpan "infile4" 3 6 3 10 , srcInfoPoints = [] }
+              "Expr"))
+        (UnkindedVar
+           SrcSpanInfo
+             { srcInfoSpan = SrcSpan "infile4" 3 11 3 12 , srcInfoPoints = [] }
+           (Ident
+              SrcSpanInfo
+                { srcInfoSpan = SrcSpan "infile4" 3 11 3 12 , srcInfoPoints = [] }
+              "a")))
+     (UnkindedVar
+        SrcSpanInfo
+          { srcInfoSpan = SrcSpan "infile4" 3 13 3 14 , srcInfoPoints = [] }
+        (Ident
+           SrcSpanInfo
+             { srcInfoSpan = SrcSpan "infile4" 3 13 3 14 , srcInfoPoints = [] }
+           "b")))
+  Nothing
+  [ GadtDecl
+      SrcSpanInfo
+        { srcInfoSpan = SrcSpan "infile4" 4 5 4 25
+        , srcInfoPoints = [ SrcSpan "infile4" 4 9 4 11 ]
+        }
+      (Ident
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 4 5 4 8 , srcInfoPoints = [] }
+         "Var")
+      Nothing
+      (TyFun
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 4 12 4 25
+           , srcInfoPoints = [ SrcSpan "infile4" 4 14 4 16 ]
+           }
+         (TyVar
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 4 12 4 13 , srcInfoPoints = [] }
+            (Ident
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 4 12 4 13 , srcInfoPoints = [] }
+               "a"))
+         (TyApp
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 4 17 4 25 , srcInfoPoints = [] }
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 4 17 4 23 , srcInfoPoints = [] }
+               (TyCon
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 4 17 4 21 , srcInfoPoints = [] }
+                  (UnQual
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 4 17 4 21 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 4 17 4 21 , srcInfoPoints = [] }
+                        "Expr")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 4 22 4 23 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 4 22 4 23 , srcInfoPoints = [] }
+                     "a")))
+            (TyVar
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 4 24 4 25 , srcInfoPoints = [] }
+               (Ident
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 4 24 4 25 , srcInfoPoints = [] }
+                  "b"))))
+  , GadtDecl
+      SrcSpanInfo
+        { srcInfoSpan = SrcSpan "infile4" 5 5 5 32
+        , srcInfoPoints = [ SrcSpan "infile4" 5 12 5 14 ]
+        }
+      (Ident
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 5 5 5 11 , srcInfoPoints = [] }
+         "IConst")
+      Nothing
+      (TyFun
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 5 15 5 32
+           , srcInfoPoints = [ SrcSpan "infile4" 5 19 5 21 ]
+           }
+         (TyCon
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 5 15 5 18 , srcInfoPoints = [] }
+            (UnQual
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 5 15 5 18 , srcInfoPoints = [] }
+               (Ident
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 5 15 5 18 , srcInfoPoints = [] }
+                  "Int")))
+         (TyApp
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 5 22 5 32 , srcInfoPoints = [] }
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 5 22 5 28 , srcInfoPoints = [] }
+               (TyCon
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 5 22 5 26 , srcInfoPoints = [] }
+                  (UnQual
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 5 22 5 26 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 5 22 5 26 , srcInfoPoints = [] }
+                        "Expr")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 5 27 5 28 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 5 27 5 28 , srcInfoPoints = [] }
+                     "a")))
+            (TyCon
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 5 29 5 32 , srcInfoPoints = [] }
+               (UnQual
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 5 29 5 32 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 5 29 5 32 , srcInfoPoints = [] }
+                     "Int")))))
+  , GadtDecl
+      SrcSpanInfo
+        { srcInfoSpan = SrcSpan "infile4" 6 5 6 36
+        , srcInfoPoints = [ SrcSpan "infile4" 6 12 6 14 ]
+        }
+      (Ident
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 6 5 6 11 , srcInfoPoints = [] }
+         "RConst")
+      Nothing
+      (TyFun
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 6 15 6 36
+           , srcInfoPoints = [ SrcSpan "infile4" 6 21 6 23 ]
+           }
+         (TyCon
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 6 15 6 20 , srcInfoPoints = [] }
+            (UnQual
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 6 15 6 20 , srcInfoPoints = [] }
+               (Ident
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 6 15 6 20 , srcInfoPoints = [] }
+                  "Float")))
+         (TyApp
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 6 24 6 36 , srcInfoPoints = [] }
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 6 24 6 30 , srcInfoPoints = [] }
+               (TyCon
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 6 24 6 28 , srcInfoPoints = [] }
+                  (UnQual
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 6 24 6 28 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 6 24 6 28 , srcInfoPoints = [] }
+                        "Expr")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 6 29 6 30 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 6 29 6 30 , srcInfoPoints = [] }
+                     "a")))
+            (TyCon
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 6 31 6 36 , srcInfoPoints = [] }
+               (UnQual
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 6 31 6 36 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 6 31 6 36 , srcInfoPoints = [] }
+                     "Float")))))
+  , GadtDecl
+      SrcSpanInfo
+        { srcInfoSpan = SrcSpan "infile4" 7 5 7 46
+        , srcInfoPoints = [ SrcSpan "infile4" 7 11 7 13 ]
+        }
+      (Ident
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 7 5 7 10 , srcInfoPoints = [] }
+         "PProd")
+      Nothing
+      (TyFun
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 7 14 7 46
+           , srcInfoPoints = [ SrcSpan "infile4" 7 23 7 25 ]
+           }
+         (TyApp
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 7 14 7 22 , srcInfoPoints = [] }
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 7 14 7 20 , srcInfoPoints = [] }
+               (TyCon
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 7 14 7 18 , srcInfoPoints = [] }
+                  (UnQual
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 7 14 7 18 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 7 14 7 18 , srcInfoPoints = [] }
+                        "Expr")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 7 19 7 20 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 7 19 7 20 , srcInfoPoints = [] }
+                     "a")))
+            (TyVar
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 7 21 7 22 , srcInfoPoints = [] }
+               (Ident
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 7 21 7 22 , srcInfoPoints = [] }
+                  "b")))
+         (TyFun
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 7 26 7 46
+              , srcInfoPoints = [ SrcSpan "infile4" 7 35 7 37 ]
+              }
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 7 26 7 34 , srcInfoPoints = [] }
+               (TyApp
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 7 26 7 32 , srcInfoPoints = [] }
+                  (TyCon
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 7 26 7 30 , srcInfoPoints = [] }
+                     (UnQual
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 7 26 7 30 , srcInfoPoints = [] }
+                        (Ident
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile4" 7 26 7 30 , srcInfoPoints = [] }
+                           "Expr")))
+                  (TyVar
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 7 31 7 32 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 7 31 7 32 , srcInfoPoints = [] }
+                        "a")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 7 33 7 34 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 7 33 7 34 , srcInfoPoints = [] }
+                     "b")))
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 7 38 7 46 , srcInfoPoints = [] }
+               (TyApp
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 7 38 7 44 , srcInfoPoints = [] }
+                  (TyCon
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 7 38 7 42 , srcInfoPoints = [] }
+                     (UnQual
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 7 38 7 42 , srcInfoPoints = [] }
+                        (Ident
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile4" 7 38 7 42 , srcInfoPoints = [] }
+                           "Expr")))
+                  (TyVar
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 7 43 7 44 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 7 43 7 44 , srcInfoPoints = [] }
+                        "a")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 7 45 7 46 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 7 45 7 46 , srcInfoPoints = [] }
+                     "b")))))
+  , GadtDecl
+      SrcSpanInfo
+        { srcInfoSpan = SrcSpan "infile4" 8 5 8 41
+        , srcInfoPoints = [ SrcSpan "infile4" 8 11 8 13 ]
+        }
+      (Ident
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 8 5 8 10 , srcInfoPoints = [] }
+         "SIMul")
+      Nothing
+      (TyFun
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 8 14 8 41
+           , srcInfoPoints = [ SrcSpan "infile4" 8 23 8 25 ]
+           }
+         (TyApp
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 8 14 8 22 , srcInfoPoints = [] }
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 8 14 8 20 , srcInfoPoints = [] }
+               (TyCon
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 8 14 8 18 , srcInfoPoints = [] }
+                  (UnQual
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 8 14 8 18 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 8 14 8 18 , srcInfoPoints = [] }
+                        "Expr")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 8 19 8 20 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 8 19 8 20 , srcInfoPoints = [] }
+                     "a")))
+            (TyVar
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 8 21 8 22 , srcInfoPoints = [] }
+               (Ident
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 8 21 8 22 , srcInfoPoints = [] }
+                  "b")))
+         (TyFun
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 8 26 8 41
+              , srcInfoPoints = [ SrcSpan "infile4" 8 30 8 32 ]
+              }
+            (TyCon
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 8 26 8 29 , srcInfoPoints = [] }
+               (UnQual
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 8 26 8 29 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 8 26 8 29 , srcInfoPoints = [] }
+                     "Int")))
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 8 33 8 41 , srcInfoPoints = [] }
+               (TyApp
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 8 33 8 39 , srcInfoPoints = [] }
+                  (TyCon
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 8 33 8 37 , srcInfoPoints = [] }
+                     (UnQual
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 8 33 8 37 , srcInfoPoints = [] }
+                        (Ident
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile4" 8 33 8 37 , srcInfoPoints = [] }
+                           "Expr")))
+                  (TyVar
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 8 38 8 39 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 8 38 8 39 , srcInfoPoints = [] }
+                        "a")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 8 40 8 41 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 8 40 8 41 , srcInfoPoints = [] }
+                     "b")))))
+  , GadtDecl
+      SrcSpanInfo
+        { srcInfoSpan = SrcSpan "infile4" 9 5 9 47
+        , srcInfoPoints = [ SrcSpan "infile4" 9 11 9 13 ]
+        }
+      (Ident
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 9 5 9 10 , srcInfoPoints = [] }
+         "SRMul")
+      Nothing
+      (TyFun
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile4" 9 14 9 47
+           , srcInfoPoints = [ SrcSpan "infile4" 9 23 9 25 ]
+           }
+         (TyApp
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 9 14 9 22 , srcInfoPoints = [] }
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 9 14 9 20 , srcInfoPoints = [] }
+               (TyCon
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 9 14 9 18 , srcInfoPoints = [] }
+                  (UnQual
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 9 14 9 18 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 9 14 9 18 , srcInfoPoints = [] }
+                        "Expr")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 9 19 9 20 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 9 19 9 20 , srcInfoPoints = [] }
+                     "a")))
+            (TyVar
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 9 21 9 22 , srcInfoPoints = [] }
+               (Ident
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 9 21 9 22 , srcInfoPoints = [] }
+                  "b")))
+         (TyFun
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile4" 9 26 9 47
+              , srcInfoPoints = [ SrcSpan "infile4" 9 32 9 34 ]
+              }
+            (TyCon
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 9 26 9 31 , srcInfoPoints = [] }
+               (UnQual
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 9 26 9 31 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 9 26 9 31 , srcInfoPoints = [] }
+                     "Float")))
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile4" 9 35 9 47 , srcInfoPoints = [] }
+               (TyApp
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 9 35 9 41 , srcInfoPoints = [] }
+                  (TyCon
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 9 35 9 39 , srcInfoPoints = [] }
+                     (UnQual
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 9 35 9 39 , srcInfoPoints = [] }
+                        (Ident
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile4" 9 35 9 39 , srcInfoPoints = [] }
+                           "Expr")))
+                  (TyVar
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 9 40 9 41 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 9 40 9 41 , srcInfoPoints = [] }
+                        "a")))
+               (TyCon
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile4" 9 42 9 47 , srcInfoPoints = [] }
+                  (UnQual
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile4" 9 42 9 47 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile4" 9 42 9 47 , srcInfoPoints = [] }
+                        "Float"))))))
+  ]
+  []

@@ -1,0 +1,2 @@
+data PTree a b = PLeaf a b
+             | PNode (PTree (a,a))
