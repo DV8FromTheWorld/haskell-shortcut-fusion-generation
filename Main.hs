@@ -61,13 +61,13 @@ genFold :: GADT -> String
 genFold (gadtName, gadtHead, constructors) =
     printf "%s ::\n\
            \  %s ->\n\
-           \  forall %s. %s -> f %s\n\
+           \  forall %s. %s -> %s\n\
            \%s"
         funcName
         (genFoldType gadtName constructors)
-        "a b"
+        (join " " $ getTypeVariablesHead gadtHead)
         (prettyPrint gadtHead)
-        "a b"
+        (prettyPrint $ convertHead gadtHead)
         (genFoldFunctions funcName constructors)
     where funcName = "fold" ++ gadtName
 
@@ -137,9 +137,13 @@ getTypeVariables' (TyApp l t1 t2) = getTypeVariables t1 ++ getTypeVariables t2
 getTypeVariables' (TyVar l name) = [getFromName name]
 getTypeVariables' _ = []
 
+getTypeVariablesHead gadtHead = nub $ getTypeVariablesHead' gadtHead
+getTypeVariablesHead' (DHApp _ x1 x2) = getTypeVariablesHead' x1 ++ getFromTyVarBind x2
+getTypeVariablesHead' (DHead _ _) = []
+
+
 
 shouldReplace gadtName constrType = safeInit $ shouldReplace' gadtName constrType
-
 shouldReplace' gadtName (TyFun l t1 t2) = shouldReplace' gadtName t1 ++ shouldReplace' gadtName t2
 shouldReplace' gadtName (TyCon l name) = [getFromQName name == gadtName]
 shouldReplace' gadtName (TyApp l t1 t2) = handleApp gadtName t1
@@ -158,12 +162,18 @@ separate (Module _ _ _ _ [x]) = x
 getHeadName (DHApp _ x _) = getHeadName x
 getHeadName (DHead _ x)   = getFromName x
 
+getFromTyVarBind (UnkindedVar _ name) = [getFromName name]
+getFromTyVarBind (KindedVar _ name _) = [getFromName name]
+
 getFromQName (Qual _ _ name) = getFromName name
 getFromQName (UnQual _ name) = getFromName name
 getFromQName (Special _ _) = "" --We don't care about special constructors
 
 getFromName (Ident _ name) = name
 getFromName (Symbol _ name) = name
+
+convertHead (DHApp l x1 x2) = DHApp l (convertHead x1) x2
+convertHead (DHead l (Ident l2 name)) = DHead l (Ident l2 "f")
 
 convert name (TyFun l t1 t2) = TyFun l (convert name t1) (convert name t2)
 convert name (TyApp l t1 t2) = TyApp l (convert name t1) (convert name t2)
