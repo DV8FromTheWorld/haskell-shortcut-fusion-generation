@@ -102,7 +102,7 @@ genFoldFunctionLine funcName len (n, (constrName, _, _, needFolds)) =
         genVarOrFoldCall :: (Int, Bool) -> String
         genVarOrFoldCall (n, shouldFold) =
             if shouldFold
-            then printf "(%s %s v_%d)" funcName (genFunctions len)
+            then printf "(%s %s v_%d)" funcName (genFunctions len) n
             else genVar n
 
 genFunctions len = join " " $ map genFn [1..len]
