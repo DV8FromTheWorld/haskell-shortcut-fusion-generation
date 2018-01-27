@@ -8,12 +8,13 @@ import Language.Haskell.Exts hiding (layout, Var)
 import Text.Show.Pretty (ppShow)
 import System.Environment
 import Data.List (nub)
+import Text.Printf (printf)
 
 -- Represents: A GADT data declaration
---  Example: 
+--  Example:
 --    data BTree a b where
 --      BLeaf :: a -> BTree a b
---      BNode :: b -> BTree a b -> BTree a b -> BTree a b 
+--      BNode :: b -> BTree a b -> BTree a b -> BTree a b
 -- Contents:
 --  String:    GADT Name.
 --               From Example: "BTree"
@@ -34,70 +35,96 @@ type GADT = (String, DeclHead SrcSpanInfo, [GADTConstructor])
 --               From Example: [False, True]
 type GADTConstructor = (String, Type SrcSpanInfo, [String], [Bool])
 
--- main for generator. calls functions to read in filenames, run the 
+-- main for generator. calls functions to read in filenames, run the
 -- generator and write the output file
 main :: IO ()
-main = do 
+main = do
         --ifile <- getInFileName
         --ofile <- getOutFileName
         args <- getArgs
-        case args of 
+        case args of
             [ifile, ofile] -> do
                 result <- parseFile ifile
                 let hModule = (fromParseResult result)
                     gDataDecl = separate hModule
-                    gadtName = getGadtName gDataDecl
                     parseResult = ppShow gDataDecl
-                    allDecls = getDecls gDataDecl
-                    firstDecl = head allDecls
                     gadt = simplifyGADT gDataDecl
                 --writeFile ofile parseResult
                 --putStrLn parseResult
                 putStrLn $ prettyPrint gDataDecl ++ "\n\n"
-                putStrLn $ generateFold gadt
+                putStrLn $ genFold gadt
                 putStrLn "Generation successful\n"
-                
-            _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
-         --s <- readFile ifile
-         -- writeFile ofile (genStuff s)
-         --putStrLn $ head (separateLines s)
-         --
-         
-generateFold (gadtName, gadtHead, constructors) = 
-    funcName ++ " :: "
-    ++ (joinR " ->\n  " $ map (generateTypeSignature gadtName) constructors)
-    ++ "forall a b. " ++ (prettyPrint gadtHead) ++ " -> f a b\n"
-    ++ (join "\n" $ map (generateFoldLine funcName (length constructors)) $ zip [1..length constructors] constructors)
-        where funcName = "fold" ++ gadtName
-    
-generateTypeSignature gadtName (_, constrType, typeVariables, _) = 
-    "("
-    ++ forallSection
-    ++ (prettyPrint $ convert gadtName constrType)
-    ++ ")"
-        where forallSection = if length typeVariables /= 0
-                              then "forall " ++ (join " " typeVariables) ++ ". "
-                              else ""
-            
-generateFoldLine funcName len (n, constr) = funcName ++ " " ++ (joinR " " ["f_" ++ show i | i <- [1..len]]) ++ getThing funcName len n constr
-getThing funcName len n (name, _, _, needFolds) = 
-                                "(" ++ name ++ " " ++ (generateVariables $ length needFolds) ++ ") = " ++ genFn n ++ " "
-                                ++ (join " " $ map (\(n, b) -> if not b then genVar n else "(" ++ funcName ++ " " ++ generateFunctions len ++ " v_" ++ show n ++ ")") (zip [1..length needFolds] needFolds))
- 
-generateFunctions len = join " " $ map genFn [1..len]
-generateVariables len = join " " $ map genVar [1..len]
-genFn n = "f_" ++ show n
-genVar n = "v_" ++ show n
 
+            _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
+
+genFold :: GADT -> String
+genFold (gadtName, gadtHead, constructors) =
+    printf "%s ::\n\
+           \  %s ->\n\
+           \  forall %s. %s -> f %s\n\
+           \%s"
+        funcName
+        (genFoldType gadtName constructors)
+        "a b"
+        (prettyPrint gadtHead)
+        "a b"
+        (genFoldFunctions funcName constructors)
+    where funcName = "fold" ++ gadtName
+
+genFoldType :: String -> [GADTConstructor] -> String
+genFoldType gadtName constructors =
+    (join " ->\n  " $ map (genFoldTypeLine gadtName) constructors)
+
+genFoldTypeLine :: String -> GADTConstructor -> String
+genFoldTypeLine gadtName (_, constrType, typeVariables, _) =
+    printf "(%s%s)"
+        forallSection
+        (prettyPrint $ convert gadtName constrType)
+    where forallSection = if length typeVariables /= 0
+                          then printf "forall %s. " (join " " typeVariables)
+                          else ""
+
+genFoldFunctions :: String -> [GADTConstructor] -> String
+genFoldFunctions funcName constructors =
+    (join "\n" $ map (genFoldFunctionLine funcName len) $ zip [1..len] constructors)
+    where len = length constructors
+
+genFoldFunctionLine :: String -> Int -> (Int, GADTConstructor) -> String
+genFoldFunctionLine funcName len (n, (constrName, _, _, needFolds)) =
+    printf "%s %s (%s %s) = %s %s"
+        funcName
+        (genFunctions len)
+        constrName
+        (genVariables $ length needFolds)
+        (genFn n)
+        (join " " $ map genVarOrFoldCall (zip [1..length needFolds] needFolds))
+    where
+        genVarOrFoldCall :: (Int, Bool) -> String
+        genVarOrFoldCall (n, shouldFold) =
+            if shouldFold
+            then printf "(%s %s v_%d)" funcName (genFunctions len)
+            else genVar n
+
+genFunctions len = join " " $ map genFn [1..len]
+genVariables len = join " " $ map genVar [1..len]
+
+genFn :: Int -> String
+genFn n = printf "f_%d" n
+
+genVar :: Int -> String
+genVar n = printf "v_%d" n
+
+join :: String -> [String] -> String
 join sep [] = []
 join sep [x] = x
 join sep (x:xs) = x ++ sep ++ (join sep xs)
 
+joinR :: String -> [String] -> String
 joinR sep [] = []
 joinR sep xs = join sep xs ++ sep
 
 simplifyGADT :: Decl SrcSpanInfo -> GADT
-simplifyGADT (GDataDecl _ _ _ gadtHead _ constructors _) = 
+simplifyGADT (GDataDecl _ _ _ gadtHead _ constructors _) =
     (gadtName, gadtHead, map (simplifyGADTConstructor gadtName) constructors)
         where gadtName = getHeadName gadtHead
 
@@ -113,27 +140,20 @@ getTypeVariables' _ = []
 
 shouldReplace gadtName constrType = safeInit $ shouldReplace' gadtName constrType
 
-safeInit [] = []
-safeInit xs = init xs
-                            
 shouldReplace' gadtName (TyFun l t1 t2) = shouldReplace' gadtName t1 ++ shouldReplace' gadtName t2
 shouldReplace' gadtName (TyCon l name) = [getFromQName name == gadtName]
 shouldReplace' gadtName (TyApp l t1 t2) = handleApp gadtName t1
 shouldReplace' gadtName (TyVar l name) = [False]
 shouldReplace' _ _ = []
 
---shouldReplace gadtName (TyCon l name) = [getFromQName name == gadtName]
---shouldReplace _ _ = []
-
 handleApp gadtName (TyApp l t1 t2) = handleApp gadtName t1 ++ handleApp gadtName t2
 handleApp gadtName (TyCon l name) = [getFromQName name == gadtName]
 handleApp gadtName _ = []
 
-
+safeInit [] = []
+safeInit xs = init xs
 
 separate (Module _ _ _ _ [x]) = x
-getGadtName (GDataDecl _ _ _ x _ _ _) = getHeadName x
-getDecls (GDataDecl _ _ _ _ _ x _) = x
 
 getHeadName (DHApp _ x _) = getHeadName x
 getHeadName (DHead _ x)   = getFromName x
@@ -144,14 +164,6 @@ getFromQName (Special _ _) = "" --We don't care about special constructors
 
 getFromName (Ident _ name) = name
 getFromName (Symbol _ name) = name
-
-getGadtDeclDesc (GadtDecl _ name _ decType) = getFromName name
-                                        ++ " :: "
-                                        ++ (prettyPrint $ convert "Expr" decType)
-                                        
-getDecType (GadtDecl _ _ _ decType) = decType
-                                        
-getAllDesc name decls = map (prettyPrint . (convert name) . getDecType) decls
 
 convert name (TyFun l t1 t2) = TyFun l (convert name t1) (convert name t2)
 convert name (TyApp l t1 t2) = TyApp l (convert name t1) (convert name t2)
@@ -174,7 +186,7 @@ getOutFileName :: IO String
 getOutFileName = do putStrLn "Output file: "
                     ofile <- getLine
                     return ofile
-                    
+
 -- == Tests ==
 data Expr a b where
     Var :: a -> Expr a b
@@ -184,9 +196,10 @@ data Expr a b where
     SIMul :: Expr a b -> Int -> Expr a b
     SRMul :: Expr a b -> Float -> Expr a Float
 
-    
+
 -- ====== Generated from above GADT
-foldExpr :: (forall a b. a -> f a b) ->
+foldExpr ::
+  (forall a b. a -> f a b) ->
   (forall a. Int -> f a Int) ->
   (forall a. Float -> f a Float) ->
   (forall a b. f a b -> f a b -> f a b) ->
