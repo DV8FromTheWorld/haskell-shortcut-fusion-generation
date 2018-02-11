@@ -56,6 +56,9 @@ main = do
 
             _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
 
+-- =======================================================================================
+-- |                                Top Level Generators                                 |
+-- =======================================================================================
 genAllFunctions :: GADT -> String
 genAllFunctions gadt =
     printf "type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2\n\
@@ -104,6 +107,11 @@ genRule (gadtName, _, constructors) =
         functions
     where functions = genFunctions $ length constructors
 
+
+-- =======================================================================================
+-- |                                  Generator Helpers                                  |
+-- =======================================================================================
+
 genFoldType :: String -> [GADTConstructor] -> String
 genFoldType gadtName constructors =
     (join " ->\n  " $ map (genFoldTypeLine gadtName) constructors)
@@ -138,24 +146,6 @@ genFoldFunctionLine funcName len (n, (constrName, _, _, needFolds)) =
             then printf "(%s %s v_%d)" funcName (genFunctions len) n
             else genVar n
 
-genFunctions len = join " " $ map genFn [1..len]
-genVariables len = join " " $ map genVar [1..len]
-
-genFn :: Int -> String
-genFn n = printf "f_%d" n
-
-genVar :: Int -> String
-genVar n = printf "v_%d" n
-
-join :: String -> [String] -> String
-join sep [] = []
-join sep [x] = x
-join sep (x:xs) = x ++ sep ++ (join sep xs)
-
-joinR :: String -> [String] -> String
-joinR sep [] = []
-joinR sep xs = join sep xs ++ sep
-
 simplifyGADT :: Decl SrcSpanInfo -> GADT
 simplifyGADT (GDataDecl _ _ _ gadtHead _ constructors _) =
     (gadtName, gadtHead, map (simplifyGADTConstructor gadtName) constructors)
@@ -164,6 +154,16 @@ simplifyGADT (GDataDecl _ _ _ gadtHead _ constructors _) =
 simplifyGADTConstructor :: String -> GadtDecl SrcSpanInfo -> GADTConstructor
 simplifyGADTConstructor gadtName (GadtDecl _ constrName _ constrType) = (getFromName constrName, constrType, getTypeVariables constrType, shouldReplace gadtName constrType)
 
+-- =======================================================================================
+-- |                               Abstract Syntax Getters                               |
+-- =======================================================================================
+
+-- Generates a list of the type variables in a declared Type.
+-- Example:
+--   Given a Type representing:
+--      a -> (b -> [(c, d)] -> Int) -> Expr a d
+--   returns:
+--      ["a", "b", "c", "d"]
 getTypeVariables :: Language.Haskell.Exts.Type l -> [String]
 getTypeVariables  decType = nub $ getTypeVariables' decType
 getTypeVariables' decType = case decType of
@@ -194,40 +194,58 @@ getTypeVariables' decType = case decType of
     -- TyQuasiQuote
     _  -> []
 
+-- Similar to getTypeVariables, this function finds all of the type variables specified
+-- in a data declaration's head (data {head} = ...)
+-- Example:
+--   Given a DeclHead representing:
+--      data Expr a b = ...
+--   Returns: ["a", "b"]
 getTypeVariablesHead gadtHead = nub $ getTypeVariablesHead' gadtHead
 getTypeVariablesHead' (DHApp _ x1 x2) = getTypeVariablesHead' x1 ++ getFromTyVarBind x2
 getTypeVariablesHead' (DHead _ _) = []
 
-
-
-shouldReplace gadtName constrType = safeInit $ shouldReplace' gadtName constrType
-shouldReplace' gadtName (TyFun l t1 t2) = shouldReplace' gadtName t1 ++ shouldReplace' gadtName t2
-shouldReplace' gadtName (TyCon l name) = [getFromQName name == gadtName]
-shouldReplace' gadtName (TyApp l t1 t2) = handleApp gadtName t1
-shouldReplace' gadtName (TyVar l name) = [False]
-shouldReplace' _ _ = []
-
-handleApp gadtName (TyApp l t1 t2) = handleApp gadtName t1 ++ handleApp gadtName t2
-handleApp gadtName (TyCon l name) = [getFromQName name == gadtName]
-handleApp gadtName _ = []
-
-safeInit [] = []
-safeInit xs = init xs
-
-separate (Module _ _ _ _ [x]) = x
-
+-- Extracts the string name of a data declaration
+-- Example:
+--   Given a DeclHead representing:
+--     data Expr a b = ...
+--   Returns: "Expr"
 getHeadName (DHApp _ x _) = getHeadName x
 getHeadName (DHead _ x)   = getFromName x
 
+-- Extracts the string representation of a type variable out of its abstract syntax representation
 getFromTyVarBind (UnkindedVar _ name) = [getFromName name]
 getFromTyVarBind (KindedVar _ name _) = [getFromName name]
 
+-- Extracts the string representation of a qualified name out of its abstract syntax representation
 getFromQName (Qual _ _ name) = getFromName name
 getFromQName (UnQual _ name) = getFromName name
-getFromQName (Special _ _) = "" --We don't care about special constructors
+getFromQName (Special _ _)   = "" --We don't care about special constructors
 
+-- Extracts the string representation of an identifier (Name) out of its abstract syntax representation
 getFromName (Ident _ name) = name
 getFromName (Symbol _ name) = name
+
+-- Placeholder function that returns the first abstract syntax declaration in a module.
+-- Currently being used to retrieve a GADT from a file where the GADT is the first declared item in the file.
+separate (Module _ _ _ _ [x]) = x
+
+
+shouldReplace gadtName constrType = safeInit $ shouldReplace' gadtName constrType
+shouldReplace' gadtName constrType = case constrType of
+    TyFun _ t1 t2   -> shouldReplace' gadtName t1 ++ shouldReplace' gadtName t2
+    TyCon _ name    -> [getFromQName name == gadtName]
+    TyApp _ t1 t2   -> handleApp gadtName t1
+    TyVar _ name    -> [False]
+    TyParen _ t1    -> [False]
+    _               -> []
+
+handleApp gadtName (TyApp _ t1 t2) = handleApp gadtName t1 ++ handleApp gadtName t2
+handleApp gadtName (TyCon _ name) = [getFromQName name == gadtName]
+handleApp gadtName _ = []
+
+-- =======================================================================================
+-- |                              Abstract Syntax Modifiers                              |
+-- =======================================================================================
 
 convertHead (DHApp l x1 x2) = DHApp l (convertHead x1) x2
 convertHead (DHead l (Ident l2 name)) = DHead l (Ident l2 "f")
@@ -242,6 +260,32 @@ convertQ name (UnQual l (Ident l2 ident)) = if name == ident
                                          else UnQual l (Ident l2 ident)
 convertQ name x = x
 
+-- =======================================================================================
+-- |                                  General Utilities                                  |
+-- =======================================================================================
+genFn :: Int -> String
+genFn n = printf "f_%d" n
+
+genVar :: Int -> String
+genVar n = printf "v_%d" n
+
+genFunctions len = join " " $ map genFn [1..len]
+genVariables len = join " " $ map genVar [1..len]
+
+join :: String -> [String] -> String
+join sep [] = []
+join sep [x] = x
+join sep (x:xs) = x ++ sep ++ (join sep xs)
+
+joinR :: String -> [String] -> String
+joinR sep [] = []
+joinR sep xs = join sep xs ++ sep
+
+-- A safe version of Prelude.init. Does not throw errors on []
+-- Returns the entire list, minus the first element.
+safeInit [] = []
+safeInit xs = init xs
+
 -- Gets input file name from stdin
 getInFileName :: IO String
 getInFileName = do putStrLn "Input file: "
@@ -254,7 +298,11 @@ getOutFileName = do putStrLn "Output file: "
                     ofile <- getLine
                     return ofile
 
--- == Tests ==
+-- =======================================================================================
+-- |             Code Generated By Program, Place Here To Test Compilability             |
+-- =======================================================================================
+type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2
+
 data Expr a b where
     Var :: a -> Expr a b
     IConst :: Int -> Expr a Int
@@ -262,12 +310,6 @@ data Expr a b where
     PProd :: Expr a b -> Expr a b -> Expr a b
     SIMul :: Expr a b -> Int -> Expr a b
     SRMul :: Expr a b -> Float -> Expr a Float
-
-
-type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2
-
-
--- ====== Generated from above GADT
 
 foldExpr ::
   (forall a b. a -> f a b) ->
@@ -294,15 +336,14 @@ buildExpr :: (forall f.
       MNat c f) -> MNat c Expr
 buildExpr g = g Var IConst RConst PProd SIMul SRMul
 
--- ====
+-- ============================
 data Boo a b where
-        Foo :: a -> (b -> Boo a b) -> Boo a a
+        Foo :: a -> ([c] -> Boo a b) -> Boo a a
         Joe :: a -> Boo (b -> Boo a b) Int -> Boo a a
         Lin :: a -> (b -> Int) -> Boo a b
 
-
 foldBoo ::
-  (forall a b. a -> (b -> Boo a b) -> f a a) ->
+  (forall a c b. a -> ([c] -> Boo a b) -> f a a) ->
   (forall a b. a -> f (b -> Boo a b) Int -> f a a) ->
   (forall a b. a -> (b -> Int) -> f a b) ->
   forall a b. Boo a b -> f a b
@@ -311,11 +352,14 @@ foldBoo f_1 f_2 f_3 (Joe v_1 v_2) = f_2 v_1 (foldBoo f_1 f_2 f_3 v_2)
 foldBoo f_1 f_2 f_3 (Lin v_1 v_2) = f_3 v_1 v_2
 
 buildBoo :: (forall f.
-  (forall a b. a -> (b -> Boo a b) -> f a a) ->
+  (forall a c b. a -> ([c] -> Boo a b) -> f a a) ->
   (forall a b. a -> f (b -> Boo a b) Int -> f a a) ->
   (forall a b. a -> (b -> Int) -> f a b) ->
       MNat c f) -> MNat c Boo
 buildBoo g = g Foo Joe Lin
+
+-- === Fold/Build Rule ===
+-- foldBoo f_1 f_2 f_3 . buildBoo g = g f_1 f_2 f_3
 
 
 
