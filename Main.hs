@@ -51,10 +51,11 @@ main = do
                     gadt = simplifyGADT gDataDecl
                 putStrLn $ prettyPrint gDataDecl ++ "\n\n"
                 putStrLn $ genAllFunctions gadt
+                --writeFile ofile parseResult
                 putStrLn "\nGeneration successful\n"
 
             _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
-            
+
 genAllFunctions :: GADT -> String
 genAllFunctions gadt =
     printf "type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2\n\
@@ -93,7 +94,7 @@ genBuild (gadtName, _, constructors) =
            funcName
            (join " " $ map (\(constrName, _, _, _) -> constrName) constructors)
    where funcName = "build" ++ gadtName
-   
+
 genRule :: GADT -> String
 genRule (gadtName, _, constructors) =
     printf "%s %s . %s g = g %s"
@@ -163,11 +164,35 @@ simplifyGADT (GDataDecl _ _ _ gadtHead _ constructors _) =
 simplifyGADTConstructor :: String -> GadtDecl SrcSpanInfo -> GADTConstructor
 simplifyGADTConstructor gadtName (GadtDecl _ constrName _ constrType) = (getFromName constrName, constrType, getTypeVariables constrType, shouldReplace gadtName constrType)
 
-getTypeVariables decType = nub $ getTypeVariables' decType
-getTypeVariables' (TyFun l t1 t2) = getTypeVariables t1 ++ getTypeVariables t2
-getTypeVariables' (TyApp l t1 t2) = getTypeVariables t1 ++ getTypeVariables t2
-getTypeVariables' (TyVar l name) = [getFromName name]
-getTypeVariables' _ = []
+getTypeVariables :: Language.Haskell.Exts.Type l -> [String]
+getTypeVariables  decType = nub $ getTypeVariables' decType
+getTypeVariables' decType = case decType of
+    --When we find a type variable, extract its string representation
+    TyVar _ name                            -> [getFromName name]
+
+    -- Recursive calls to find TyVar's
+    TyForall _ _ _ t1                       -> getTypeVariables' t1
+    TyFun _ t1 t2                           -> getTypeVariables' t1 ++ getTypeVariables' t2
+    TyTuple _ _ types                       -> concat $ map getTypeVariables' types
+    TyUnboxedSum _ types                    -> concat $ map getTypeVariables' types
+    TyList _ t1                             -> getTypeVariables' t1
+    TyApp _ t1 t2                           -> getTypeVariables' t1 ++ getTypeVariables' t2
+    TyParArray _ t1                         -> getTypeVariables' t1
+    TyParen _ t1                            -> getTypeVariables' t1
+    TyInfix _ t1 _ t2                       -> getTypeVariables' t1 ++ getTypeVariables' t2
+    TyKind _ t1 _                           -> getTypeVariables' t1
+    TyPromoted _ (PromotedList _ _ types)   -> concat $ map getTypeVariables' types
+    TyPromoted _ (PromotedTuple _ types)    -> concat $ map getTypeVariables' types
+    TyEquals _ t1 t2                        -> getTypeVariables' t1 ++ getTypeVariables' t2
+    TyBang _ _ _ t1                         -> getTypeVariables' t1
+
+    -- Unhandled Types. These contain no possible type variable information
+    -- TyCon      - Unused because we don't want constructor names, only type variables
+    -- TyPromoted - When not dealing with a PromotedList or PromotedTuple, there is no useful type info
+    -- TySplit
+    -- TyWildCard
+    -- TyQuasiQuote
+    _  -> []
 
 getTypeVariablesHead gadtHead = nub $ getTypeVariablesHead' gadtHead
 getTypeVariablesHead' (DHApp _ x1 x2) = getTypeVariablesHead' x1 ++ getFromTyVarBind x2
@@ -237,8 +262,8 @@ data Expr a b where
     PProd :: Expr a b -> Expr a b -> Expr a b
     SIMul :: Expr a b -> Int -> Expr a b
     SRMul :: Expr a b -> Float -> Expr a Float
-    
-    
+
+
 type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2
 
 
