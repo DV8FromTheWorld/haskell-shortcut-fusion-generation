@@ -78,7 +78,7 @@ genFold (gadtName, gadtHead, constructors) =
            \  forall %s. %s -> %s\n\
            \%s"
         funcName
-        (genFoldType gadtName constructors)
+        (genType gadtName constructors)
         (join " " $ getTypeVariablesHead gadtHead)
         (prettyPrint gadtHead)
         (prettyPrint $ convertHead gadtHead)
@@ -92,7 +92,7 @@ genBuild (gadtName, _, constructors) =
            \      MNat c f) -> MNat c %s\n\
            \%s g = g %s"
            funcName
-           (genFoldType gadtName constructors)
+           (genType gadtName constructors)
            gadtName
            funcName
            (join " " $ map (\(constrName, _, _, _) -> constrName) constructors)
@@ -112,12 +112,12 @@ genRule (gadtName, _, constructors) =
 -- |                                  Generator Helpers                                  |
 -- =======================================================================================
 
-genFoldType :: String -> [GADTConstructor] -> String
-genFoldType gadtName constructors =
-    (join " ->\n  " $ map (genFoldTypeLine gadtName) constructors)
+genType :: String -> [GADTConstructor] -> String
+genType gadtName constructors =
+    (join " ->\n  " $ map (genTypeLine gadtName) constructors)
 
-genFoldTypeLine :: String -> GADTConstructor -> String
-genFoldTypeLine gadtName (_, constrType, typeVariables, _) =
+genTypeLine :: String -> GADTConstructor -> String
+genTypeLine gadtName (_, constrType, typeVariables, _) =
     printf "(%s%s)"
         forallSection
         (prettyPrint $ convert gadtName constrType)
