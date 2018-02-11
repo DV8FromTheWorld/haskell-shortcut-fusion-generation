@@ -49,13 +49,23 @@ main = do
                     gDataDecl = separate hModule
                     parseResult = ppShow gDataDecl
                     gadt = simplifyGADT gDataDecl
-                --writeFile ofile parseResult
-                --putStrLn parseResult
                 putStrLn $ prettyPrint gDataDecl ++ "\n\n"
-                putStrLn $ genFold gadt
-                putStrLn "Generation successful\n"
+                putStrLn $ genAllFunctions gadt
+                putStrLn "\nGeneration successful\n"
 
             _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
+            
+genAllFunctions :: GADT -> String
+genAllFunctions gadt =
+    printf "type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2\n\
+           \\n\
+           \%s\n\n\
+           \%s\n\n\
+           \-- === Fold/Build Rule ===\n\
+           \-- %s"
+           (genFold gadt)
+           (genBuild gadt)
+           (genRule gadt)
 
 genFold :: GADT -> String
 genFold (gadtName, gadtHead, constructors) =
@@ -70,6 +80,28 @@ genFold (gadtName, gadtHead, constructors) =
         (prettyPrint $ convertHead gadtHead)
         (genFoldFunctions funcName constructors)
     where funcName = "fold" ++ gadtName
+
+genBuild :: GADT -> String
+genBuild (gadtName, _, constructors) =
+    printf "%s :: (forall f.\n\
+           \  %s ->\n\
+           \      MNat c f) -> MNat c %s\n\
+           \%s g = g %s"
+           funcName
+           (genFoldType gadtName constructors)
+           gadtName
+           funcName
+           (join " " $ map (\(constrName, _, _, _) -> constrName) constructors)
+   where funcName = "build" ++ gadtName
+   
+genRule :: GADT -> String
+genRule (gadtName, _, constructors) =
+    printf "%s %s . %s g = g %s"
+        ("fold" ++ gadtName)
+        functions
+        ("build" ++ gadtName)
+        functions
+    where functions = genFunctions $ length constructors
 
 genFoldType :: String -> [GADTConstructor] -> String
 genFoldType gadtName constructors =
@@ -205,9 +237,13 @@ data Expr a b where
     PProd :: Expr a b -> Expr a b -> Expr a b
     SIMul :: Expr a b -> Int -> Expr a b
     SRMul :: Expr a b -> Float -> Expr a Float
+    
+    
+type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2
 
 
 -- ====== Generated from above GADT
+
 foldExpr ::
   (forall a b. a -> f a b) ->
   (forall a. Int -> f a Int) ->
@@ -222,6 +258,42 @@ foldExpr f_1 f_2 f_3 f_4 f_5 f_6 (RConst v_1) = f_3 v_1
 foldExpr f_1 f_2 f_3 f_4 f_5 f_6 (PProd v_1 v_2) = f_4 (foldExpr f_1 f_2 f_3 f_4 f_5 f_6 v_1) (foldExpr f_1 f_2 f_3 f_4 f_5 f_6 v_2)
 foldExpr f_1 f_2 f_3 f_4 f_5 f_6 (SIMul v_1 v_2) = f_5 (foldExpr f_1 f_2 f_3 f_4 f_5 f_6 v_1) v_2
 foldExpr f_1 f_2 f_3 f_4 f_5 f_6 (SRMul v_1 v_2) = f_6 (foldExpr f_1 f_2 f_3 f_4 f_5 f_6 v_1) v_2
+
+buildExpr :: (forall f.
+  (forall a b. a -> f a b) ->
+  (forall a. Int -> f a Int) ->
+  (forall a. Float -> f a Float) ->
+  (forall a b. f a b -> f a b -> f a b) ->
+  (forall a b. f a b -> Int -> f a b) ->
+  (forall a b. f a b -> Float -> f a Float) ->
+      MNat c f) -> MNat c Expr
+buildExpr g = g Var IConst RConst PProd SIMul SRMul
+
+-- ====
+data Boo a b where
+        Foo :: a -> (b -> Boo a b) -> Boo a a
+        Joe :: a -> Boo (b -> Boo a b) Int -> Boo a a
+        Lin :: a -> (b -> Int) -> Boo a b
+
+
+foldBoo ::
+  (forall a b. a -> (b -> Boo a b) -> f a a) ->
+  (forall a b. a -> f (b -> Boo a b) Int -> f a a) ->
+  (forall a b. a -> (b -> Int) -> f a b) ->
+  forall a b. Boo a b -> f a b
+foldBoo f_1 f_2 f_3 (Foo v_1 v_2) = f_1 v_1 v_2
+foldBoo f_1 f_2 f_3 (Joe v_1 v_2) = f_2 v_1 (foldBoo f_1 f_2 f_3 v_2)
+foldBoo f_1 f_2 f_3 (Lin v_1 v_2) = f_3 v_1 v_2
+
+buildBoo :: (forall f.
+  (forall a b. a -> (b -> Boo a b) -> f a a) ->
+  (forall a b. a -> f (b -> Boo a b) Int -> f a a) ->
+  (forall a b. a -> (b -> Int) -> f a b) ->
+      MNat c f) -> MNat c Boo
+buildBoo g = g Foo Joe Lin
+
+
+
 
 -- ==== From paper
 --foldExpr :: (forall a b. a -> f a b) ->

@@ -1,2 +1,6 @@
-data PTree a b = PLeaf a b
-             | PNode (PTree (a,a))
+{-# LANGUAGE GADTs #-}
+
+data Boo a b where
+  Foo :: a -> (b -> Boo a b) -> Boo a a
+  Joe :: a -> Boo (b -> Boo a b) Int -> Boo a a
+  Lin :: a -> (b -> Int) -> Boo a b
