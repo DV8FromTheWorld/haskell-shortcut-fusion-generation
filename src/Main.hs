@@ -1,3 +1,9 @@
+-- Written by Austin Keener (2018)
+-- In collaboration with Dr. Patricia Johann
+--
+-- References:
+--  * Foundations for Structured Programming with GADTs by Patricia Johann and Neil Ghani
+
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE RankNTypes #-}
@@ -48,9 +54,9 @@ main = do
                     gDataDecl = separate hModule
                     parseResult = ppShow gDataDecl
                     gadt = simplifyGADT gDataDecl
-                    result = printf "%s\n\n%s" (prettyPrint gDataDecl) (genAllFunctions gadt)
-                putStrLn result
-                writeFile ofile result
+                    genResult = printf "%s\n\n%s" (prettyPrint gDataDecl) (genAllFunctions gadt)
+                putStrLn genResult
+                writeFile ofile genResult
                 putStrLn $ printf "\nGeneration successful. Result also saved at: %s\n" ofile
 
             _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
@@ -247,7 +253,7 @@ simplifyGADTConstructor gadtName (GadtDecl _ constrName _ constrType) = (getFrom
 --      a -> (b -> [(c, d)] -> Int) -> Expr a d
 --   returns:
 --      ["a", "b", "c", "d"]
-getTypeVariables :: Language.Haskell.Exts.Type l -> [String]
+getTypeVariables :: Type l -> [String]
 getTypeVariables  decType = nub $ getTypeVariables' decType
 getTypeVariables' decType = case decType of
     --When we find a type variable, extract its string representation
@@ -283,8 +289,9 @@ getTypeVariables' decType = case decType of
 --   Given a DeclHead representing:
 --      data Expr a b = ...
 --   Returns: ["a", "b"]
+getTypeVariablesHead :: DeclHead l -> [String]
 getTypeVariablesHead gadtHead = nub $ getTypeVariablesHead' gadtHead
-getTypeVariablesHead' (DHApp _ x1 x2) = getTypeVariablesHead' x1 ++ getFromTyVarBind x2
+getTypeVariablesHead' (DHApp _ x1 x2) = getTypeVariablesHead' x1 ++ [getFromTyVarBind x2]
 getTypeVariablesHead' (DHead _ _) = []
 
 -- Extracts the string name of a data declaration
@@ -292,19 +299,23 @@ getTypeVariablesHead' (DHead _ _) = []
 --   Given a DeclHead representing:
 --     data Expr a b = ...
 --   Returns: "Expr"
+getHeadName :: DeclHead l -> String
 getHeadName (DHApp _ x _) = getHeadName x
 getHeadName (DHead _ x)   = getFromName x
 
 -- Extracts the string representation of a type variable (TyVarBind) out of its abstract syntax representation
-getFromTyVarBind (UnkindedVar _ name) = [getFromName name]
-getFromTyVarBind (KindedVar _ name _) = [getFromName name]
+getFromTyVarBind :: TyVarBind l -> String
+getFromTyVarBind (UnkindedVar _ name) = getFromName name
+getFromTyVarBind (KindedVar _ name _) = getFromName name
 
 -- Extracts the string representation of a qualified name (QName) out of its abstract syntax representation
+getFromQName :: QName l -> String
 getFromQName (Qual _ _ name) = getFromName name
 getFromQName (UnQual _ name) = getFromName name
 getFromQName (Special _ _)   = "" --We don't care about special constructors
 
 -- Extracts the string representation of an identifier (Name) out of its abstract syntax representation
+getFromName :: Name l -> String
 getFromName (Ident _ name) = name
 getFromName (Symbol _ name) = name
 
@@ -321,7 +332,8 @@ separate (Module _ _ _ _ [x]) = x
 --   Given the BNode Type:
 --     shouldFold "BTree" AST(BNodeType)
 --   Returns:
---     [False, True, True]
+--     [False, True, True]'
+shouldFold :: String -> Type l -> [Bool]
 shouldFold gadtName constrType = safeInit $ shouldFold' gadtName constrType   -- we use safeInit because we want to always throw away the last value in the list
 shouldFold' gadtName constrType = case constrType of                          -- as it is always the GADT type and should not be considered when generating a list
     TyFun _ t1 t2   -> shouldFold' gadtName t1 ++ shouldFold' gadtName t2     -- of constructor variables.
@@ -350,6 +362,7 @@ shouldFold' gadtName constrType = case constrType of                          --
 --         )
 --   Returns:
 --     [True]
+shouldFoldApp :: String -> Type l -> [Bool]
 shouldFoldApp gadtName (TyApp _ t1 t2) = shouldFoldApp gadtName t1 ++ shouldFoldApp gadtName t2
 shouldFoldApp gadtName (TyCon _ name) = [getFromQName name == gadtName]
 shouldFoldApp gadtName _ = []
@@ -358,14 +371,37 @@ shouldFoldApp gadtName _ = []
 -- |                              Abstract Syntax Modifiers                              |
 -- =======================================================================================
 
+-- Changes the identifier in a data declaration head to be "f".
+-- We do this so that we can easily reuse the AST for a Data declaration to pretty print it.
+-- Example:
+--   Given the AST representing the head: data BTree a b =
+--     convertHead AST(BTreeHead)
+--   Returns:
+--     AST(FHead), where FHead: data f a b = ...
+--
+-- This means that if we use prettyPrint on AST(FHead), it would print "f a b"
+convertHead :: DeclHead l -> DeclHead l
 convertHead (DHApp l x1 x2) = DHApp l (convertHead x1) x2
 convertHead (DHead l (Ident l2 name)) = DHead l (Ident l2 "f")
 
+-- Changes the identifer in Type Application to "f" if the provided "name"
+-- is the same as the Type Constructor's identifier
+-- Example:
+--   Given the AST for BNode: a -> BTree a b -> BTree a b -> BTree a b
+--     convert "BTree" AST(BNode)
+--   Returns:
+--     AST representing: a -> f a b -> f a b -> f a b
+--
+-- This means that if we use prettyPrint, it would print "a -> f a b -> f a b -> f a b"
+convert :: String -> Type l -> Type l
 convert name (TyFun l t1 t2) = TyFun l (convert name t1) (convert name t2)
 convert name (TyApp l t1 t2) = TyApp l (convert name t1) (convert name t2)
 convert name (TyCon l qname) = TyCon l (convertQ name qname)
 convert name x = x
 
+-- Changes the identifier of a Unqualified Name to "f" if the provided "name"
+-- is the same as the QName's identifier
+convertQ :: String -> QName l -> QName l
 convertQ name (UnQual l (Ident l2 ident)) = if name == ident
                                          then UnQual l (Ident l2 "f")
                                          else UnQual l (Ident l2 ident)
@@ -374,20 +410,31 @@ convertQ name x = x
 -- =======================================================================================
 -- |                                  General Utilities                                  |
 -- =======================================================================================
+
+-- Creates a string of "f_#", where # is 'n'
 genFn :: Int -> String
 genFn n = printf "f_%d" n
 
+-- Creates a string of "v_n", where # is 'n'
 genVar :: Int -> String
 genVar n = printf "v_%d" n
 
+-- Creates a string of "f_1 f_2 f_3 .. f_n", given 'n'
+genFunctions :: Int -> String
 genFunctions len = join " " $ map genFn [1..len]
+
+-- Creates a string of "v_1 v_2 v_3 .. v_n", given 'n'
+genVariables :: Int -> String
 genVariables len = join " " $ map genVar [1..len]
 
+-- Similar to Javascript's .join(string) function, concats all items in a list
+-- with a separator between each item.
 join :: String -> [String] -> String
 join sep [] = []
 join sep [x] = x
 join sep (x:xs) = x ++ sep ++ (join sep xs)
 
+-- Same as the join function, except it also places the separator after the last item as well.
 joinR :: String -> [String] -> String
 joinR sep [] = []
 joinR sep xs = join sep xs ++ sep
@@ -397,20 +444,8 @@ joinR sep xs = join sep xs ++ sep
 safeInit [] = []
 safeInit xs = init xs
 
--- Gets input file name from stdin
-getInFileName :: IO String
-getInFileName = do putStrLn "Input file: "
-                   ifile <- getLine
-                   return ifile
-
--- Gets input file name from stdin
-getOutFileName :: IO String
-getOutFileName = do putStrLn "Output file: "
-                    ofile <- getLine
-                    return ofile
-
 -- =======================================================================================
--- |             Code Generated By Program, Place Here To Test Compilability             |
+-- |             Code Generated By Program, Placed Here To Test Compilability            |
 -- =======================================================================================
 type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2
 
