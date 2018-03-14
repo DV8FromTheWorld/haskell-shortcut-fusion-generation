@@ -1,0 +1,51 @@
+{-# LANGUAGE
+    DataKinds
+  , DeriveDataTypeable
+  , DeriveGeneric
+  , FlexibleInstances
+  , GADTs
+  , GeneralizedNewtypeDeriving
+  , KindSignatures
+  , LambdaCase
+  , MultiParamTypeClasses
+  , OverloadedStrings
+  , ScopedTypeVariables
+  , StandaloneDeriving
+  , TypeApplications
+  , TypeInType
+  , TypeOperators
+  , UndecidableInstances
+#-}
+
+data FromClause schema params tables where
+  Table
+    :: Aliased (Table schema) table
+    -> FromClause schema params '[table]
+  Subquery
+    :: Aliased (Query schema params) table
+    -> FromClause schema params '[table]
+  CrossJoin
+    :: FromClause schema params right
+    -> FromClause schema params left
+    -> FromClause schema params (Join left right)
+  InnerJoin
+    :: FromClause schema params right
+    -> Condition (Join left right) 'Ungrouped params
+    -> FromClause schema params left
+    -> FromClause schema params (Join left right)
+  LeftOuterJoin
+    :: FromClause schema params right
+    -> Condition (Join left right) 'Ungrouped params
+    -> FromClause schema params left
+    -> FromClause schema params (Join left (NullifyTables right))
+  RightOuterJoin
+    :: FromClause schema params right
+    -> Condition (Join left right) 'Ungrouped params
+    -> FromClause schema params left
+    -> FromClause schema params (Join (NullifyTables left) right)
+  FullOuterJoin
+    :: FromClause schema params right
+    -> Condition (Join left right) 'Ungrouped params
+    -> FromClause schema params left
+    -> FromClause schema params
+        (Join (NullifyTables left) (NullifyTables right))

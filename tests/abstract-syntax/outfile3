@@ -1,12 +1,12 @@
 GDataDecl
   SrcSpanInfo
-    { srcInfoSpan = SrcSpan "infile3" 3 1 7 0
+    { srcInfoSpan = SrcSpan "infile3" 3 1 8 0
     , srcInfoPoints =
         [ SrcSpan "infile3" 3 14 3 19
-        , SrcSpan "infile3" 4 3 4 3
         , SrcSpan "infile3" 5 3 5 3
         , SrcSpan "infile3" 6 3 6 3
-        , SrcSpan "infile3" 7 1 7 0
+        , SrcSpan "infile3" 7 3 7 3
+        , SrcSpan "infile3" 8 1 8 0
         ]
     }
   (DataType
@@ -43,124 +43,17 @@ GDataDecl
   Nothing
   [ GadtDecl
       SrcSpanInfo
-        { srcInfoSpan = SrcSpan "infile3" 4 3 4 40
-        , srcInfoPoints = [ SrcSpan "infile3" 4 7 4 9 ]
-        }
-      (Ident
-         SrcSpanInfo
-           { srcInfoSpan = SrcSpan "infile3" 4 3 4 6 , srcInfoPoints = [] }
-         "Foo")
-      Nothing
-      (TyFun
-         SrcSpanInfo
-           { srcInfoSpan = SrcSpan "infile3" 4 10 4 40
-           , srcInfoPoints = [ SrcSpan "infile3" 4 12 4 14 ]
-           }
-         (TyVar
-            SrcSpanInfo
-              { srcInfoSpan = SrcSpan "infile3" 4 10 4 11 , srcInfoPoints = [] }
-            (Ident
-               SrcSpanInfo
-                 { srcInfoSpan = SrcSpan "infile3" 4 10 4 11 , srcInfoPoints = [] }
-               "a"))
-         (TyFun
-            SrcSpanInfo
-              { srcInfoSpan = SrcSpan "infile3" 4 15 4 40
-              , srcInfoPoints = [ SrcSpan "infile3" 4 30 4 32 ]
-              }
-            (TyParen
-               SrcSpanInfo
-                 { srcInfoSpan = SrcSpan "infile3" 4 15 4 29
-                 , srcInfoPoints =
-                     [ SrcSpan "infile3" 4 15 4 16 , SrcSpan "infile3" 4 28 4 29 ]
-                 }
-               (TyFun
-                  SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 4 16 4 28
-                    , srcInfoPoints = [ SrcSpan "infile3" 4 18 4 20 ]
-                    }
-                  (TyVar
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 4 16 4 17 , srcInfoPoints = [] }
-                     (Ident
-                        SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 4 16 4 17 , srcInfoPoints = [] }
-                        "b"))
-                  (TyApp
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 4 21 4 28 , srcInfoPoints = [] }
-                     (TyApp
-                        SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 4 21 4 26 , srcInfoPoints = [] }
-                        (TyCon
-                           SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 4 21 4 24 , srcInfoPoints = [] }
-                           (UnQual
-                              SrcSpanInfo
-                                { srcInfoSpan = SrcSpan "infile3" 4 21 4 24 , srcInfoPoints = [] }
-                              (Ident
-                                 SrcSpanInfo
-                                   { srcInfoSpan = SrcSpan "infile3" 4 21 4 24
-                                   , srcInfoPoints = []
-                                   }
-                                 "Boo")))
-                        (TyVar
-                           SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 4 25 4 26 , srcInfoPoints = [] }
-                           (Ident
-                              SrcSpanInfo
-                                { srcInfoSpan = SrcSpan "infile3" 4 25 4 26 , srcInfoPoints = [] }
-                              "a")))
-                     (TyVar
-                        SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 4 27 4 28 , srcInfoPoints = [] }
-                        (Ident
-                           SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 4 27 4 28 , srcInfoPoints = [] }
-                           "b")))))
-            (TyApp
-               SrcSpanInfo
-                 { srcInfoSpan = SrcSpan "infile3" 4 33 4 40 , srcInfoPoints = [] }
-               (TyApp
-                  SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 4 33 4 38 , srcInfoPoints = [] }
-                  (TyCon
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 4 33 4 36 , srcInfoPoints = [] }
-                     (UnQual
-                        SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 4 33 4 36 , srcInfoPoints = [] }
-                        (Ident
-                           SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 4 33 4 36 , srcInfoPoints = [] }
-                           "Boo")))
-                  (TyVar
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 4 37 4 38 , srcInfoPoints = [] }
-                     (Ident
-                        SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 4 37 4 38 , srcInfoPoints = [] }
-                        "a")))
-               (TyVar
-                  SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 4 39 4 40 , srcInfoPoints = [] }
-                  (Ident
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 4 39 4 40 , srcInfoPoints = [] }
-                     "a")))))
-  , GadtDecl
-      SrcSpanInfo
-        { srcInfoSpan = SrcSpan "infile3" 5 3 5 48
+        { srcInfoSpan = SrcSpan "infile3" 5 3 5 42
         , srcInfoPoints = [ SrcSpan "infile3" 5 7 5 9 ]
         }
       (Ident
          SrcSpanInfo
            { srcInfoSpan = SrcSpan "infile3" 5 3 5 6 , srcInfoPoints = [] }
-         "Joe")
+         "Foo")
       Nothing
       (TyFun
          SrcSpanInfo
-           { srcInfoSpan = SrcSpan "infile3" 5 10 5 48
+           { srcInfoSpan = SrcSpan "infile3" 5 10 5 42
            , srcInfoPoints = [ SrcSpan "infile3" 5 12 5 14 ]
            }
          (TyVar
@@ -172,138 +65,108 @@ GDataDecl
                "a"))
          (TyFun
             SrcSpanInfo
-              { srcInfoSpan = SrcSpan "infile3" 5 15 5 48
-              , srcInfoPoints = [ SrcSpan "infile3" 5 38 5 40 ]
+              { srcInfoSpan = SrcSpan "infile3" 5 15 5 42
+              , srcInfoPoints = [ SrcSpan "infile3" 5 32 5 34 ]
               }
-            (TyApp
+            (TyParen
                SrcSpanInfo
-                 { srcInfoSpan = SrcSpan "infile3" 5 15 5 37 , srcInfoPoints = [] }
-               (TyApp
+                 { srcInfoSpan = SrcSpan "infile3" 5 15 5 31
+                 , srcInfoPoints =
+                     [ SrcSpan "infile3" 5 15 5 16 , SrcSpan "infile3" 5 30 5 31 ]
+                 }
+               (TyFun
                   SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 5 15 5 33 , srcInfoPoints = [] }
-                  (TyCon
+                    { srcInfoSpan = SrcSpan "infile3" 5 16 5 30
+                    , srcInfoPoints = [ SrcSpan "infile3" 5 20 5 22 ]
+                    }
+                  (TyList
                      SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 5 15 5 18 , srcInfoPoints = [] }
-                     (UnQual
+                       { srcInfoSpan = SrcSpan "infile3" 5 16 5 19
+                       , srcInfoPoints =
+                           [ SrcSpan "infile3" 5 16 5 17 , SrcSpan "infile3" 5 18 5 19 ]
+                       }
+                     (TyVar
                         SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 5 15 5 18 , srcInfoPoints = [] }
+                          { srcInfoSpan = SrcSpan "infile3" 5 17 5 18 , srcInfoPoints = [] }
                         (Ident
                            SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 5 15 5 18 , srcInfoPoints = [] }
-                           "Boo")))
-                  (TyParen
+                             { srcInfoSpan = SrcSpan "infile3" 5 17 5 18 , srcInfoPoints = [] }
+                           "c")))
+                  (TyApp
                      SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 5 19 5 33
-                       , srcInfoPoints =
-                           [ SrcSpan "infile3" 5 19 5 20 , SrcSpan "infile3" 5 32 5 33 ]
-                       }
-                     (TyFun
+                       { srcInfoSpan = SrcSpan "infile3" 5 23 5 30 , srcInfoPoints = [] }
+                     (TyApp
                         SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 5 20 5 32
-                          , srcInfoPoints = [ SrcSpan "infile3" 5 22 5 24 ]
-                          }
-                        (TyVar
+                          { srcInfoSpan = SrcSpan "infile3" 5 23 5 28 , srcInfoPoints = [] }
+                        (TyCon
                            SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 5 20 5 21 , srcInfoPoints = [] }
-                           (Ident
+                             { srcInfoSpan = SrcSpan "infile3" 5 23 5 26 , srcInfoPoints = [] }
+                           (UnQual
                               SrcSpanInfo
-                                { srcInfoSpan = SrcSpan "infile3" 5 20 5 21 , srcInfoPoints = [] }
-                              "b"))
-                        (TyApp
-                           SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 5 25 5 32 , srcInfoPoints = [] }
-                           (TyApp
-                              SrcSpanInfo
-                                { srcInfoSpan = SrcSpan "infile3" 5 25 5 30 , srcInfoPoints = [] }
-                              (TyCon
-                                 SrcSpanInfo
-                                   { srcInfoSpan = SrcSpan "infile3" 5 25 5 28
-                                   , srcInfoPoints = []
-                                   }
-                                 (UnQual
-                                    SrcSpanInfo
-                                      { srcInfoSpan = SrcSpan "infile3" 5 25 5 28
-                                      , srcInfoPoints = []
-                                      }
-                                    (Ident
-                                       SrcSpanInfo
-                                         { srcInfoSpan = SrcSpan "infile3" 5 25 5 28
-                                         , srcInfoPoints = []
-                                         }
-                                       "Boo")))
-                              (TyVar
-                                 SrcSpanInfo
-                                   { srcInfoSpan = SrcSpan "infile3" 5 29 5 30
-                                   , srcInfoPoints = []
-                                   }
-                                 (Ident
-                                    SrcSpanInfo
-                                      { srcInfoSpan = SrcSpan "infile3" 5 29 5 30
-                                      , srcInfoPoints = []
-                                      }
-                                    "a")))
-                           (TyVar
-                              SrcSpanInfo
-                                { srcInfoSpan = SrcSpan "infile3" 5 31 5 32 , srcInfoPoints = [] }
+                                { srcInfoSpan = SrcSpan "infile3" 5 23 5 26 , srcInfoPoints = [] }
                               (Ident
                                  SrcSpanInfo
-                                   { srcInfoSpan = SrcSpan "infile3" 5 31 5 32
+                                   { srcInfoSpan = SrcSpan "infile3" 5 23 5 26
                                    , srcInfoPoints = []
                                    }
-                                 "b"))))))
-               (TyCon
-                  SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 5 34 5 37 , srcInfoPoints = [] }
-                  (UnQual
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 5 34 5 37 , srcInfoPoints = [] }
-                     (Ident
+                                 "Boo")))
+                        (TyVar
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile3" 5 27 5 28 , srcInfoPoints = [] }
+                           (Ident
+                              SrcSpanInfo
+                                { srcInfoSpan = SrcSpan "infile3" 5 27 5 28 , srcInfoPoints = [] }
+                              "a")))
+                     (TyVar
                         SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 5 34 5 37 , srcInfoPoints = [] }
-                        "Int"))))
-            (TyApp
-               SrcSpanInfo
-                 { srcInfoSpan = SrcSpan "infile3" 5 41 5 48 , srcInfoPoints = [] }
-               (TyApp
-                  SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 5 41 5 46 , srcInfoPoints = [] }
-                  (TyCon
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 5 41 5 44 , srcInfoPoints = [] }
-                     (UnQual
-                        SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 5 41 5 44 , srcInfoPoints = [] }
+                          { srcInfoSpan = SrcSpan "infile3" 5 29 5 30 , srcInfoPoints = [] }
                         (Ident
                            SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 5 41 5 44 , srcInfoPoints = [] }
+                             { srcInfoSpan = SrcSpan "infile3" 5 29 5 30 , srcInfoPoints = [] }
+                           "b")))))
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile3" 5 35 5 42 , srcInfoPoints = [] }
+               (TyApp
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile3" 5 35 5 40 , srcInfoPoints = [] }
+                  (TyCon
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 5 35 5 38 , srcInfoPoints = [] }
+                     (UnQual
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile3" 5 35 5 38 , srcInfoPoints = [] }
+                        (Ident
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile3" 5 35 5 38 , srcInfoPoints = [] }
                            "Boo")))
                   (TyVar
                      SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 5 45 5 46 , srcInfoPoints = [] }
+                       { srcInfoSpan = SrcSpan "infile3" 5 39 5 40 , srcInfoPoints = [] }
                      (Ident
                         SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 5 45 5 46 , srcInfoPoints = [] }
+                          { srcInfoSpan = SrcSpan "infile3" 5 39 5 40 , srcInfoPoints = [] }
                         "a")))
                (TyVar
                   SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 5 47 5 48 , srcInfoPoints = [] }
+                    { srcInfoSpan = SrcSpan "infile3" 5 41 5 42 , srcInfoPoints = [] }
                   (Ident
                      SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 5 47 5 48 , srcInfoPoints = [] }
+                       { srcInfoSpan = SrcSpan "infile3" 5 41 5 42 , srcInfoPoints = [] }
                      "a")))))
   , GadtDecl
       SrcSpanInfo
-        { srcInfoSpan = SrcSpan "infile3" 6 3 6 36
+        { srcInfoSpan = SrcSpan "infile3" 6 3 6 48
         , srcInfoPoints = [ SrcSpan "infile3" 6 7 6 9 ]
         }
       (Ident
          SrcSpanInfo
            { srcInfoSpan = SrcSpan "infile3" 6 3 6 6 , srcInfoPoints = [] }
-         "Lin")
+         "Joe")
       Nothing
       (TyFun
          SrcSpanInfo
-           { srcInfoSpan = SrcSpan "infile3" 6 10 6 36
+           { srcInfoSpan = SrcSpan "infile3" 6 10 6 48
            , srcInfoPoints = [ SrcSpan "infile3" 6 12 6 14 ]
            }
          (TyVar
@@ -315,66 +178,209 @@ GDataDecl
                "a"))
          (TyFun
             SrcSpanInfo
-              { srcInfoSpan = SrcSpan "infile3" 6 15 6 36
-              , srcInfoPoints = [ SrcSpan "infile3" 6 26 6 28 ]
+              { srcInfoSpan = SrcSpan "infile3" 6 15 6 48
+              , srcInfoPoints = [ SrcSpan "infile3" 6 38 6 40 ]
               }
-            (TyParen
-               SrcSpanInfo
-                 { srcInfoSpan = SrcSpan "infile3" 6 15 6 25
-                 , srcInfoPoints =
-                     [ SrcSpan "infile3" 6 15 6 16 , SrcSpan "infile3" 6 24 6 25 ]
-                 }
-               (TyFun
-                  SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 6 16 6 24
-                    , srcInfoPoints = [ SrcSpan "infile3" 6 18 6 20 ]
-                    }
-                  (TyVar
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 6 16 6 17 , srcInfoPoints = [] }
-                     (Ident
-                        SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 6 16 6 17 , srcInfoPoints = [] }
-                        "b"))
-                  (TyCon
-                     SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 6 21 6 24 , srcInfoPoints = [] }
-                     (UnQual
-                        SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 6 21 6 24 , srcInfoPoints = [] }
-                        (Ident
-                           SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 6 21 6 24 , srcInfoPoints = [] }
-                           "Int")))))
             (TyApp
                SrcSpanInfo
-                 { srcInfoSpan = SrcSpan "infile3" 6 29 6 36 , srcInfoPoints = [] }
+                 { srcInfoSpan = SrcSpan "infile3" 6 15 6 37 , srcInfoPoints = [] }
                (TyApp
                   SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 6 29 6 34 , srcInfoPoints = [] }
+                    { srcInfoSpan = SrcSpan "infile3" 6 15 6 33 , srcInfoPoints = [] }
                   (TyCon
                      SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 6 29 6 32 , srcInfoPoints = [] }
+                       { srcInfoSpan = SrcSpan "infile3" 6 15 6 18 , srcInfoPoints = [] }
                      (UnQual
                         SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 6 29 6 32 , srcInfoPoints = [] }
+                          { srcInfoSpan = SrcSpan "infile3" 6 15 6 18 , srcInfoPoints = [] }
                         (Ident
                            SrcSpanInfo
-                             { srcInfoSpan = SrcSpan "infile3" 6 29 6 32 , srcInfoPoints = [] }
+                             { srcInfoSpan = SrcSpan "infile3" 6 15 6 18 , srcInfoPoints = [] }
+                           "Boo")))
+                  (TyParen
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 6 19 6 33
+                       , srcInfoPoints =
+                           [ SrcSpan "infile3" 6 19 6 20 , SrcSpan "infile3" 6 32 6 33 ]
+                       }
+                     (TyFun
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile3" 6 20 6 32
+                          , srcInfoPoints = [ SrcSpan "infile3" 6 22 6 24 ]
+                          }
+                        (TyVar
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile3" 6 20 6 21 , srcInfoPoints = [] }
+                           (Ident
+                              SrcSpanInfo
+                                { srcInfoSpan = SrcSpan "infile3" 6 20 6 21 , srcInfoPoints = [] }
+                              "b"))
+                        (TyApp
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile3" 6 25 6 32 , srcInfoPoints = [] }
+                           (TyApp
+                              SrcSpanInfo
+                                { srcInfoSpan = SrcSpan "infile3" 6 25 6 30 , srcInfoPoints = [] }
+                              (TyCon
+                                 SrcSpanInfo
+                                   { srcInfoSpan = SrcSpan "infile3" 6 25 6 28
+                                   , srcInfoPoints = []
+                                   }
+                                 (UnQual
+                                    SrcSpanInfo
+                                      { srcInfoSpan = SrcSpan "infile3" 6 25 6 28
+                                      , srcInfoPoints = []
+                                      }
+                                    (Ident
+                                       SrcSpanInfo
+                                         { srcInfoSpan = SrcSpan "infile3" 6 25 6 28
+                                         , srcInfoPoints = []
+                                         }
+                                       "Boo")))
+                              (TyVar
+                                 SrcSpanInfo
+                                   { srcInfoSpan = SrcSpan "infile3" 6 29 6 30
+                                   , srcInfoPoints = []
+                                   }
+                                 (Ident
+                                    SrcSpanInfo
+                                      { srcInfoSpan = SrcSpan "infile3" 6 29 6 30
+                                      , srcInfoPoints = []
+                                      }
+                                    "a")))
+                           (TyVar
+                              SrcSpanInfo
+                                { srcInfoSpan = SrcSpan "infile3" 6 31 6 32 , srcInfoPoints = [] }
+                              (Ident
+                                 SrcSpanInfo
+                                   { srcInfoSpan = SrcSpan "infile3" 6 31 6 32
+                                   , srcInfoPoints = []
+                                   }
+                                 "b"))))))
+               (TyCon
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile3" 6 34 6 37 , srcInfoPoints = [] }
+                  (UnQual
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 6 34 6 37 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile3" 6 34 6 37 , srcInfoPoints = [] }
+                        "Int"))))
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile3" 6 41 6 48 , srcInfoPoints = [] }
+               (TyApp
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile3" 6 41 6 46 , srcInfoPoints = [] }
+                  (TyCon
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 6 41 6 44 , srcInfoPoints = [] }
+                     (UnQual
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile3" 6 41 6 44 , srcInfoPoints = [] }
+                        (Ident
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile3" 6 41 6 44 , srcInfoPoints = [] }
                            "Boo")))
                   (TyVar
                      SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 6 33 6 34 , srcInfoPoints = [] }
+                       { srcInfoSpan = SrcSpan "infile3" 6 45 6 46 , srcInfoPoints = [] }
                      (Ident
                         SrcSpanInfo
-                          { srcInfoSpan = SrcSpan "infile3" 6 33 6 34 , srcInfoPoints = [] }
+                          { srcInfoSpan = SrcSpan "infile3" 6 45 6 46 , srcInfoPoints = [] }
                         "a")))
                (TyVar
                   SrcSpanInfo
-                    { srcInfoSpan = SrcSpan "infile3" 6 35 6 36 , srcInfoPoints = [] }
+                    { srcInfoSpan = SrcSpan "infile3" 6 47 6 48 , srcInfoPoints = [] }
                   (Ident
                      SrcSpanInfo
-                       { srcInfoSpan = SrcSpan "infile3" 6 35 6 36 , srcInfoPoints = [] }
+                       { srcInfoSpan = SrcSpan "infile3" 6 47 6 48 , srcInfoPoints = [] }
+                     "a")))))
+  , GadtDecl
+      SrcSpanInfo
+        { srcInfoSpan = SrcSpan "infile3" 7 3 7 36
+        , srcInfoPoints = [ SrcSpan "infile3" 7 7 7 9 ]
+        }
+      (Ident
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile3" 7 3 7 6 , srcInfoPoints = [] }
+         "Lin")
+      Nothing
+      (TyFun
+         SrcSpanInfo
+           { srcInfoSpan = SrcSpan "infile3" 7 10 7 36
+           , srcInfoPoints = [ SrcSpan "infile3" 7 12 7 14 ]
+           }
+         (TyVar
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile3" 7 10 7 11 , srcInfoPoints = [] }
+            (Ident
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile3" 7 10 7 11 , srcInfoPoints = [] }
+               "a"))
+         (TyFun
+            SrcSpanInfo
+              { srcInfoSpan = SrcSpan "infile3" 7 15 7 36
+              , srcInfoPoints = [ SrcSpan "infile3" 7 26 7 28 ]
+              }
+            (TyParen
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile3" 7 15 7 25
+                 , srcInfoPoints =
+                     [ SrcSpan "infile3" 7 15 7 16 , SrcSpan "infile3" 7 24 7 25 ]
+                 }
+               (TyFun
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile3" 7 16 7 24
+                    , srcInfoPoints = [ SrcSpan "infile3" 7 18 7 20 ]
+                    }
+                  (TyVar
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 7 16 7 17 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile3" 7 16 7 17 , srcInfoPoints = [] }
+                        "b"))
+                  (TyCon
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 7 21 7 24 , srcInfoPoints = [] }
+                     (UnQual
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile3" 7 21 7 24 , srcInfoPoints = [] }
+                        (Ident
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile3" 7 21 7 24 , srcInfoPoints = [] }
+                           "Int")))))
+            (TyApp
+               SrcSpanInfo
+                 { srcInfoSpan = SrcSpan "infile3" 7 29 7 36 , srcInfoPoints = [] }
+               (TyApp
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile3" 7 29 7 34 , srcInfoPoints = [] }
+                  (TyCon
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 7 29 7 32 , srcInfoPoints = [] }
+                     (UnQual
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile3" 7 29 7 32 , srcInfoPoints = [] }
+                        (Ident
+                           SrcSpanInfo
+                             { srcInfoSpan = SrcSpan "infile3" 7 29 7 32 , srcInfoPoints = [] }
+                           "Boo")))
+                  (TyVar
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 7 33 7 34 , srcInfoPoints = [] }
+                     (Ident
+                        SrcSpanInfo
+                          { srcInfoSpan = SrcSpan "infile3" 7 33 7 34 , srcInfoPoints = [] }
+                        "a")))
+               (TyVar
+                  SrcSpanInfo
+                    { srcInfoSpan = SrcSpan "infile3" 7 35 7 36 , srcInfoPoints = [] }
+                  (Ident
+                     SrcSpanInfo
+                       { srcInfoSpan = SrcSpan "infile3" 7 35 7 36 , srcInfoPoints = [] }
                      "b")))))
   ]
   []
