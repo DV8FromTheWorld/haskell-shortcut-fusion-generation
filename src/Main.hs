@@ -56,10 +56,75 @@ main = do
                     gadt = simplifyGADT gDataDecl
                     genResult = printf "%s\n\n%s" (prettyPrint gDataDecl) (genAllFunctions gadt)
                 putStrLn genResult
-                writeFile ofile genResult
+                --writeFile ofile genResult     -- Generate Code
+                writeFile ofile $ parseResult -- Abstract Syntax
                 putStrLn $ printf "\nGeneration successful. Result also saved at: %s\n" ofile
+                putStrLn "\n\n==== Levels ====="
+                putStrLn $ showLevels gadt
+                putStrLn $ printf "Type is good: %s" $ show (validateType "Boo" $ getFirstType gadt)
 
             _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
+
+getConstr (gadtName, gadtHead, constr : xs) = constr
+getFirstType gadt = case getConstr gadt of
+    (_, t, _, _) -> t
+
+showLevels :: GADT -> String
+showLevels (gadtName, gadtHead, constr : xs) = levels constr
+
+levels :: GADTConstructor -> String
+levels (constrName, constrType, typeVars, replacementList) =
+    join "\n" $ map (\(n, t) -> printf "%d: %s" n (prettyPrint t)) (getLevels 0 constrType)
+
+getLevelZero :: Type SrcSpanInfo -> [(Int, Type SrcSpanInfo)]
+getLevelZero (TyFun l t1 t2) = getLevelZero t1 ++ getLevelZero t2
+getLevelZero t = [(0, t)]
+
+getLevels :: Int -> Type SrcSpanInfo -> [(Int, Type SrcSpanInfo)]
+getLevels n (TyFun l t1 t2) = getLevels n t1 ++ getLevels n t2
+getLevels n (TyParen l t@(TyFun _ _ _)) = getLevels (n + 1) t
+getLevels n (TyParen l t)   = getLevels n t -- [(n + 1, t)]
+getLevels n t               = [(n, t)]
+
+
+-- handle level 0
+validateType :: String -> Type SrcSpanInfo -> Bool
+validateType gadtName ty = all (isValid checkArgs gadtName) (getParts ty)
+
+-- if args aren't GADT. (level 1, 3, 5, etc)
+checkArgs ident ty = noArgsAreTheGADT && allPartsAreValid
+    where
+        parts            = getParts ty
+        args             = safeInit parts
+        noArgsAreTheGADT = all (not . (hasIdent ident)) args
+        allPartsAreValid = all (isValid checkOutput ident) parts
+
+-- if output isn't GADT.  (level 2, 4, 6, etc)
+checkOutput ident ty = outputIsNotTheGADT && allPartsAreValid
+    where
+        parts              = getParts ty
+        output             = last parts
+        outputIsNotTheGADT = not $ hasIdent ident output
+        allPartsAreValid   = all (isValid checkArgs ident) parts
+
+getParts (TyFun _ t1 t2) = t1 : getParts t2
+getParts t = [t]
+
+isValid handle ident ty = case ty of
+    TyFun _ _ _               -> handle ident ty
+    TyParen _ t               -> isValid handle ident t
+    TyList _ t                -> isValid handle ident t
+    TyTuple _ _ ts            -> all (isValid handle ident) ts
+    _                         -> True
+
+
+hasIdent ident ty = case ty of
+    TyParen _ t               -> hasIdent ident t
+    TyList _ t                -> hasIdent ident t
+    TyTuple _ _ ts            -> any (hasIdent ident) ts
+    TyApp _ t1 t2             -> pos ident t1 && pos ident t2
+    TyCon _ qname             -> getFromQName qname == ident
+    _                         -> False
 
 -- =======================================================================================
 -- |                                Top Level Generators                                 |
