@@ -15,6 +15,7 @@ import Text.Show.Pretty (ppShow)
 import System.Environment
 import Data.List (nub)
 import Text.Printf (printf)
+import Data.Maybe (fromJust, isJust)
 
 -- Represents: A GADT data declaration, simplified for ease of use from the more complex
 --             Abstract Syntax Representation provided by Haskell Src Exts
@@ -61,7 +62,7 @@ main = do
                 putStrLn $ printf "\nGeneration successful. Result also saved at: %s\n" ofile
                 putStrLn "\n\n==== Levels ====="
                 putStrLn $ showLevels gadt
-                putStrLn $ printf "Type is good: %s" $ show (validateType "Boo" $ getFirstType gadt)
+                putStrLn $ printf "Type is good: %s" $ (getValidation "Boo" $ getFirstType gadt)
 
             _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
 
@@ -86,46 +87,81 @@ getLevels n (TyParen l t@(TyFun _ _ _)) = getLevels (n + 1) t
 getLevels n (TyParen l t)   = getLevels n t -- [(n + 1, t)]
 getLevels n t               = [(n, t)]
 
-
--- handle level 0
-validateType :: String -> Type SrcSpanInfo -> Bool
-validateType gadtName ty = all (isValid checkArgs gadtName) (getParts ty)
-
--- if args aren't GADT. (level 1, 3, 5, etc)
-checkArgs ident ty = noArgsAreTheGADT && allPartsAreValid
-    where
-        parts            = getParts ty
-        args             = safeInit parts
-        noArgsAreTheGADT = all (not . (hasIdent ident)) args
-        allPartsAreValid = all (isValid checkOutput ident) parts
-
--- if output isn't GADT.  (level 2, 4, 6, etc)
-checkOutput ident ty = outputIsNotTheGADT && allPartsAreValid
-    where
-        parts              = getParts ty
-        output             = last parts
-        outputIsNotTheGADT = not $ hasIdent ident output
-        allPartsAreValid   = all (isValid checkArgs ident) parts
-
 getParts (TyFun _ t1 t2) = t1 : getParts t2
 getParts t = [t]
-
-isValid handle ident ty = case ty of
-    TyFun _ _ _               -> handle ident ty
-    TyParen _ t               -> isValid handle ident t
-    TyList _ t                -> isValid handle ident t
-    TyTuple _ _ ts            -> all (isValid handle ident) ts
-    _                         -> True
-
 
 hasIdent ident ty = case ty of
     TyParen _ t               -> hasIdent ident t
     TyList _ t                -> hasIdent ident t
     TyTuple _ _ ts            -> any (hasIdent ident) ts
-    TyApp _ t1 t2             -> pos ident t1 && pos ident t2
+    TyApp _ t1 t2             -> hasIdent ident t1 || hasIdent ident t2
     TyCon _ qname             -> getFromQName qname == ident
     _                         -> False
 
+getValidation :: String -> Type SrcSpanInfo -> String
+getValidation ident ty  = if (not . isJust) errors
+                          then "Type passes checks!"
+                          else "Failed. Reasons: \n" ++ (join "  \n" $ map handleError $ fromJust errors)
+    where errors = validateType ident ty
+
+handleError :: ([Type SrcSpanInfo], String) -> String
+handleError (typePath, error) = "Error: " ++ error ++ "\nPath:\n  " ++ tt
+    where tt = join "\n  " $ map prettyPrint typePath
+
+validateType :: String -> Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)]
+validateType ident ty = typeErrors -- not $ isJust typeErrors
+    where typeErrors = appendType ty $ mergeErrors $ map (isValid checkArgs ident) (getParts ty)
+
+-- if args aren't GADT. (level 1, 3, 5, etc)
+checkArgs :: String -> Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)]
+checkArgs ident ty = if (not . null) argErrors
+                     then Just argErrors
+                     else partErrors
+    where
+        parts            = getParts ty
+        args             = safeInit parts
+        argErrors        = map toArgError $ filter (hasIdent ident) args
+        partErrors       = appendType ty $ mergeErrors $ map (isValid checkOutput ident) parts
+        toArgError arg = ([ty, arg], "Contains the GADT {where} it shouldn't (args)")
+
+-- if output isn't GADT. (level 2, 4, 6, etc)
+checkOutput :: String -> Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)]
+checkOutput ident ty = if hasIdent ident output
+                       then Just [outputError]
+                       else partErrors
+    where
+        parts              = getParts ty
+        output             = last parts
+        partErrors         = appendType ty $ mergeErrors $ map (isValid checkArgs ident) parts
+        outputError        = ([ty, output], "Contains GADT {where} it shouldn't (output)")
+
+isValid :: (String -> Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)])
+            -> String
+            -> Type SrcSpanInfo
+            -> Maybe [([Type SrcSpanInfo], String)]
+isValid handle ident ty = case ty of
+    TyFun _ _ _               -> handle ident ty
+    TyParen _ t               -> isValid handle ident t
+    TyList _ t                -> isValid handle ident t
+    TyTuple _ _ ts            -> appendType ty $ mergeErrors $ map (isValid handle ident) ts
+    _                         -> Nothing
+
+appendType :: Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)] -> Maybe [([Type SrcSpanInfo], String)]
+appendType ty maybeErr = case maybeErr of
+    Just errors -> Just $ map (\(typePath, error) -> (ty : typePath, error)) errors
+    Nothing     -> Nothing
+
+maybesToErrors :: [Maybe [([Type SrcSpanInfo], String)]] -> [([Type SrcSpanInfo], String)]
+maybesToErrors maybes = concat $ map fromJust $ filter isJust maybes
+
+mergeErrors :: [Maybe [([Type SrcSpanInfo], String)]] -> Maybe [([Type SrcSpanInfo], String)]
+mergeErrors maybes = if (not . null) errors
+                     then Just $ errors
+                     else Nothing
+    where errors = maybesToErrors maybes
+-- if output isn't GADT.  (level 2, 4, 6, etc)
+
+-- [Maybe ([Type], String)]
 -- =======================================================================================
 -- |                                Top Level Generators                                 |
 -- =======================================================================================

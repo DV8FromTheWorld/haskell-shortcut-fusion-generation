@@ -1,0 +1,10 @@
+
+Foo :: Int -> (Int -> Boo a) -> Int -> Boo a [Works]
+
+//0:       *               | Works | FoldIfNeeded |
+//1: (Int -> Boo a)        | Works | post-compose |
+//1: (Boo -> Int)          | Fails |              | Reason: Type changes to (f -> Int), and no way to reuse previous k (no f -> Boo fn)
+//2: ((Boo -> Int) -> Int) | Works | pre-compose  | 
+//2: ((Int -> Boo) -> Int) | Fails |              | Reason: Type changes to ((Int -> f) -> Int), and the function plans to work on a Boo, thus it wont work.
+//3: (((Int -> Boo) -> Int) -> Int) 
+//   (((Int -> f) -> Int) -> Int)
