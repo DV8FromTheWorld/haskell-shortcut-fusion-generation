@@ -15,7 +15,8 @@ import Text.Show.Pretty (ppShow)
 import System.Environment
 import Data.List (nub)
 import Text.Printf (printf)
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, isJust, isNothing)
+import Control.Monad (mapM_)
 
 -- Represents: A GADT data declaration, simplified for ease of use from the more complex
 --             Abstract Syntax Representation provided by Haskell Src Exts
@@ -43,6 +44,9 @@ type GADT = (String, DeclHead SrcSpanInfo, [GADTConstructor])
 --               From Example: [False, True]
 type GADTConstructor = (String, Type SrcSpanInfo, [String], [Bool])
 
+type ConstructorErrorDetail = (String, [TypeErrorDetail])
+type TypeErrorDetail = ([Type SrcSpanInfo], String)
+
 -- main for generator. calls functions to read in filenames, run the
 -- generator and write the output file
 main :: IO ()
@@ -55,65 +59,41 @@ main = do
                     gDataDecl = separate hModule
                     parseResult = ppShow gDataDecl
                     gadt = simplifyGADT gDataDecl
-                    genResult = printf "%s\n\n%s" (prettyPrint gDataDecl) (genAllFunctions gadt)
-                putStrLn genResult
-                --writeFile ofile genResult     -- Generate Code
-                writeFile ofile $ parseResult -- Abstract Syntax
-                putStrLn $ printf "\nGeneration successful. Result also saved at: %s\n" ofile
-                putStrLn "\n\n==== Levels ====="
-                putStrLn $ showLevels gadt
-                putStrLn $ printf "Type is good: %s" $ (getValidation "Boo" $ getFirstType gadt)
+                    validationResult = validateGadt gadt
+                    --genResult = printf "%s\n\n%s" (prettyPrint gDataDecl) (genAllFunctions gadt)
+                    genResult = genAllFunctions gadt
 
-            _ -> putStrLn "Wrong number of args. Example: Main infile outfile"
+                putStrLn "---------- Input GADT ----------"
+                putStrLn $ prettyPrint gDataDecl
+                putStrLn "\n----------- Results ------------"
+                if isNothing validationResult
+                    then do
+                        putStrLn genResult
+                        writeFile ofile $ printf "%s\n\n%s" (prettyPrint gDataDecl) genResult  -- Generate Code
+                        --writeFile ofile $ parseResult                                        -- Abstract Syntax
+                        putStrLn $ printf "\nGeneration successful. Result also saved at: %s\n" ofile
 
-getConstr (gadtName, gadtHead, constr : xs) = constr
-getFirstType gadt = case getConstr gadt of
-    (_, t, _, _) -> t
+                    else do
+                        putStrLn "The provided GADT is not a positive datatype, thus we cannot generate code for it."
+                        putStrLn "\n---- Errors ----"
+                        mapM_ printErrors $ fromJust validationResult
 
-showLevels :: GADT -> String
-showLevels (gadtName, gadtHead, constr : xs) = levels constr
+            _ -> putStrLn "Wrong number of args. Example: shortcut-fusion-gen infile outfile"
 
-levels :: GADTConstructor -> String
-levels (constrName, constrType, typeVars, replacementList) =
-    join "\n" $ map (\(n, t) -> printf "%d: %s" n (prettyPrint t)) (getLevels 0 constrType)
 
-getLevelZero :: Type SrcSpanInfo -> [(Int, Type SrcSpanInfo)]
-getLevelZero (TyFun l t1 t2) = getLevelZero t1 ++ getLevelZero t2
-getLevelZero t = [(0, t)]
+-- =======================================================================================
+-- |                           Validation and Error Printing                             |
+-- =======================================================================================
 
-getLevels :: Int -> Type SrcSpanInfo -> [(Int, Type SrcSpanInfo)]
-getLevels n (TyFun l t1 t2) = getLevels n t1 ++ getLevels n t2
-getLevels n (TyParen l t@(TyFun _ _ _)) = getLevels (n + 1) t
-getLevels n (TyParen l t)   = getLevels n t -- [(n + 1, t)]
-getLevels n t               = [(n, t)]
+validateGadt :: GADT -> Maybe [ConstructorErrorDetail]
+validateGadt (gadtName, _, constructors) = maybeListToMaybe $ map (validateGadtConstructor gadtName) constructors
 
-getParts (TyFun _ t1 t2) = t1 : getParts t2
-getParts t = [t]
+-- this can be considered level 0
+validateGadtConstructor :: String -> GADTConstructor -> Maybe ConstructorErrorDetail
+validateGadtConstructor gadtName (constrName, constrType, _, _) = addConstructorName constrName $ mergeAndAddParent constrType $ map (isValid checkArgs gadtName) (getParts constrType)
 
-hasIdent ident ty = case ty of
-    TyParen _ t               -> hasIdent ident t
-    TyList _ t                -> hasIdent ident t
-    TyTuple _ _ ts            -> any (hasIdent ident) ts
-    TyApp _ t1 t2             -> hasIdent ident t1 || hasIdent ident t2
-    TyCon _ qname             -> getFromQName qname == ident
-    _                         -> False
-
-getValidation :: String -> Type SrcSpanInfo -> String
-getValidation ident ty  = if (not . isJust) errors
-                          then "Type passes checks!"
-                          else "Failed. Reasons: \n" ++ (join "  \n" $ map handleError $ fromJust errors)
-    where errors = validateType ident ty
-
-handleError :: ([Type SrcSpanInfo], String) -> String
-handleError (typePath, error) = "Error: " ++ error ++ "\nPath:\n  " ++ tt
-    where tt = join "\n  " $ map prettyPrint typePath
-
-validateType :: String -> Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)]
-validateType ident ty = typeErrors -- not $ isJust typeErrors
-    where typeErrors = appendType ty $ mergeErrors $ map (isValid checkArgs ident) (getParts ty)
-
--- if args aren't GADT. (level 1, 3, 5, etc)
-checkArgs :: String -> Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)]
+-- if args aren't GADT. (levels 1, 3, 5, etc)
+checkArgs :: String -> Type SrcSpanInfo -> Maybe [TypeErrorDetail]
 checkArgs ident ty = if (not . null) argErrors
                      then Just argErrors
                      else partErrors
@@ -121,47 +101,100 @@ checkArgs ident ty = if (not . null) argErrors
         parts            = getParts ty
         args             = safeInit parts
         argErrors        = map toArgError $ filter (hasIdent ident) args
-        partErrors       = appendType ty $ mergeErrors $ map (isValid checkOutput ident) parts
+        partErrors       = mergeAndAddParent ty $ map (isValid checkOutput ident) parts
         toArgError arg = ([ty, arg], "Contains the GADT {where} it shouldn't (args)")
 
--- if output isn't GADT. (level 2, 4, 6, etc)
-checkOutput :: String -> Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)]
+-- if output isn't GADT. (levels 2, 4, 6, etc)
+checkOutput :: String -> Type SrcSpanInfo -> Maybe [TypeErrorDetail]
 checkOutput ident ty = if hasIdent ident output
                        then Just [outputError]
                        else partErrors
     where
         parts              = getParts ty
         output             = last parts
-        partErrors         = appendType ty $ mergeErrors $ map (isValid checkArgs ident) parts
+        partErrors         = mergeAndAddParent ty $ map (isValid checkArgs ident) parts
         outputError        = ([ty, output], "Contains GADT {where} it shouldn't (output)")
 
-isValid :: (String -> Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)])
+hasIdent ident ty = case ty of
+    TyForall _ _ _ t          -> hasIdent ident t
+    TyParen _ t               -> hasIdent ident t
+    TyList _ t                -> hasIdent ident t
+    TyTuple _ _ ts            -> any (hasIdent ident) ts
+    TyApp _ t1 t2             -> hasIdent ident t1 || hasIdent ident t2
+    TyCon _ qname             -> getFromQName qname == ident
+    _                         -> False
+
+isValid :: (String -> Type SrcSpanInfo -> Maybe [TypeErrorDetail])
             -> String
             -> Type SrcSpanInfo
-            -> Maybe [([Type SrcSpanInfo], String)]
+            -> Maybe [TypeErrorDetail]
 isValid handle ident ty = case ty of
     TyFun _ _ _               -> handle ident ty
     TyParen _ t               -> isValid handle ident t
     TyList _ t                -> isValid handle ident t
-    TyTuple _ _ ts            -> appendType ty $ mergeErrors $ map (isValid handle ident) ts
+    TyTuple _ _ ts            -> mergeAndAddParent ty $ map (isValid handle ident) ts
     _                         -> Nothing
 
-appendType :: Type SrcSpanInfo -> Maybe [([Type SrcSpanInfo], String)] -> Maybe [([Type SrcSpanInfo], String)]
-appendType ty maybeErr = case maybeErr of
+getParts :: Type SrcSpanInfo -> [Type SrcSpanInfo]
+getParts (TyFun _ t1 t2) = t1 : getParts t2
+getParts t = [t]
+
+-- =====================
+-- | Error Combinators |
+-- =====================
+
+mergeAndAddParent :: Type SrcSpanInfo -> [Maybe [TypeErrorDetail]] -> Maybe [TypeErrorDetail]
+mergeAndAddParent parentType errors = addParentType parentType $ mergeErrors errors
+
+addConstructorName :: String -> Maybe [TypeErrorDetail] -> Maybe ConstructorErrorDetail
+addConstructorName constrName maybeErrors = case maybeErrors of
+    Just errors -> Just (constrName, errors)
+    Nothing     -> Nothing
+
+addParentType :: Type SrcSpanInfo -> Maybe [TypeErrorDetail] -> Maybe [TypeErrorDetail]
+addParentType ty maybeErr = case maybeErr of
     Just errors -> Just $ map (\(typePath, error) -> (ty : typePath, error)) errors
     Nothing     -> Nothing
 
-maybesToErrors :: [Maybe [([Type SrcSpanInfo], String)]] -> [([Type SrcSpanInfo], String)]
-maybesToErrors maybes = concat $ map fromJust $ filter isJust maybes
-
-mergeErrors :: [Maybe [([Type SrcSpanInfo], String)]] -> Maybe [([Type SrcSpanInfo], String)]
+mergeErrors :: [Maybe [TypeErrorDetail]] -> Maybe [TypeErrorDetail]
 mergeErrors maybes = if (not . null) errors
-                     then Just $ errors
+                     then Just errors
                      else Nothing
     where errors = maybesToErrors maybes
--- if output isn't GADT.  (level 2, 4, 6, etc)
 
--- [Maybe ([Type], String)]
+maybesToErrors :: [Maybe [TypeErrorDetail]] -> [TypeErrorDetail]
+maybesToErrors maybes = concat $ map fromJust $ filter isJust maybes
+
+maybeListToMaybe :: [Maybe a] -> Maybe [a]
+maybeListToMaybe maybes = case values of
+        [] -> Nothing
+        xs -> Just xs
+    where values = map fromJust $ filter isJust maybes
+
+-- ==================
+-- | Error Printing |
+-- ==================
+
+printErrors :: ConstructorErrorDetail -> IO ()
+printErrors (constrName, typeErrors) =
+    do
+        putStrLn $ constrName ++ ":"
+        mapM_ (putStrLn . handleError) typeErrors
+        putStrLn "----\n"
+
+handleError :: TypeErrorDetail -> String
+handleError (typePath, error) =
+    printf " Problem: %s\n\
+           \ Path:\n\
+           \%s\n"
+           error
+           tt
+    where tt = join "\n" $ map handlePathLine $ zip typePath [1 .. length typePath]
+
+handlePathLine :: (Type SrcSpanInfo, Int) -> String
+handlePathLine (typePath, level) =
+    printf "   L%s: %s" (show level) (prettyPrint typePath)
+
 -- =======================================================================================
 -- |                                Top Level Generators                                 |
 -- =======================================================================================
@@ -627,5 +660,27 @@ buildBoo g = g Foo Joe Lin
 --foldExpr v i r p si sr (SRMul t n) = sr (foldExpr v i r p si sr t) n
 
 
+-- =======================================================================================
+-- |             Code left over from experimentation. Remove at a later date.            |
+-- =======================================================================================
+
+{-
+showLevels :: GADT -> String
+showLevels (gadtName, gadtHead, constr : xs) = levels constr
+
+levels :: GADTConstructor -> String
+levels (constrName, constrType, typeVars, replacementList) =
+    join "\n" $ map (\(n, t) -> printf "%d: %s" n (prettyPrint t)) (getLevels 0 constrType)
+
+getLevelZero :: Type SrcSpanInfo -> [(Int, Type SrcSpanInfo)]
+getLevelZero (TyFun l t1 t2) = getLevelZero t1 ++ getLevelZero t2
+getLevelZero t = [(0, t)]
+
+getLevels :: Int -> Type SrcSpanInfo -> [(Int, Type SrcSpanInfo)]
+getLevels n (TyFun l t1 t2) = getLevels n t1 ++ getLevels n t2
+getLevels n (TyParen l t@(TyFun _ _ _)) = getLevels (n + 1) t
+getLevels n (TyParen l t)   = getLevels n t -- [(n + 1, t)]
+getLevels n t               = [(n, t)]
+-}
 
 

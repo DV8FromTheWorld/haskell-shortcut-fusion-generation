@@ -5,6 +5,7 @@ data Boo a b where
   --Foo :: a -> ([c] -> Boo a b) -> Boo a a
   --Foo :: a -> (d -> (Boo a b -> [c]) -> b) -> Boo a a
   --Foo :: a -> (((a -> Boo c d) -> Boo a b -> [c]) -> b) -> Boo a a
-  NoWork :: a -> (Boo a b -> [c]) -> Boo a a
+  NoWork :: a -> (Boo a b -> [c]) -> (([a] -> Boo a b) -> [c]) -> Boo a a
+  NoWork2 :: (Boo a b -> [c]) -> Boo a a
   Joe :: a -> Boo (b -> Boo a b) Int -> Boo a a
   Lin :: a -> (b -> Int) -> Boo a b
