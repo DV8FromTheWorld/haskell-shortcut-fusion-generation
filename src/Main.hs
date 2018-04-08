@@ -13,7 +13,7 @@ module Main where
 import Language.Haskell.Exts hiding (layout, Var)
 import Text.Show.Pretty (ppShow)
 import System.Environment
-import Data.List (nub)
+import Data.List (nub, isInfixOf)
 import Text.Printf (printf)
 import Data.Maybe (fromJust, isJust, isNothing)
 import Control.Monad (mapM_)
@@ -65,6 +65,8 @@ main = do
 
                 putStrLn "---------- Input GADT ----------"
                 putStrLn $ prettyPrint gDataDecl
+                showFirst gadt
+{-
                 putStrLn "\n----------- Results ------------"
                 if isNothing validationResult
                     then do
@@ -77,10 +79,146 @@ main = do
                         putStrLn "The provided GADT is not a positive datatype, thus we cannot generate code for it."
                         putStrLn "\n---- Errors ----"
                         mapM_ printErrors $ fromJust validationResult
-
+-}
             _ -> putStrLn "Wrong number of args. Example: shortcut-fusion-gen infile outfile"
 
+-- =======================================================================================
+-- |                                    Type Handling                                    |
+-- =======================================================================================
+--0: not GADT
+--0: GADT, thus fold
+--1: GADT output, thus post compose
+--2: GADT input, thus pre-compose
 
+data Foo a where
+    J :: ((Foo a -> Int) -> Int) -> Foo a
+
+fold :: (((c a -> Int) -> Int) -> c a) -> Foo a -> c a
+fold j (J y) = j (\g -> y (\r -> g (fold j r)))
+
+-- If constructor is: (J y), replacement is j,
+--  then j + below
+-- for none:   y
+-- for fold:   (fold j y)
+
+-- These require recursion on y.
+-- for a pre:  (\g -> y (\r -> g (fold j r)))
+-- for a post: (fold j) . y
+
+conGen :: GADTConstructor -> String
+conGen gadtConstr = join "\n" $ map toGens' $ zip parts [1..length parts]
+    where
+        tree@(Node _ allParts) = typeTree gadtConstr
+        parts = safeInit allParts
+
+toGens' (part, v) = toGens (genVar v) part
+
+toGens v (Leaf None _)   = v
+toGens v (Leaf Fold _)   = printf "(fold j %s)" v
+toGens v (Leaf Pre _)    = printf "(fold j %s)" v
+toGens v (Node None tys) = toGens2 v tys
+toGens v (Node Pre tys)  = printf "(\\g -> %s %s)" v $ toGens2 "g" tys
+toGens v (Node Post tys) = printf "((fold j) . %s)" $ toGens2 v tys
+
+toGens2 vv tys = if isInfixOf tysVars tysGen
+                 then vv
+                 else printf "(\\%s -> %s %s)"
+                        (join " " tysVars)
+                        vv
+                        (join " " tysGen)
+    where
+        tysParts = safeInit tys
+        tysVars  = map (\n -> printf "%s_%s" vv $ show n) [1..length tysParts]
+        tysGen   = map (\(p, v) -> toGens v p) $ zip tysParts tysVars
+{-
+    needs to either be
+    1) v_1  or
+    2) (\x_1 x_2 x_3 -> v_1 x_1 (toGens x_2 ty) (toGens x_3 ty))
+
+    1: if all parts are Leaf, or all are Node-None (recursively)
+    2: else
+
+    question: Can we do this without a "bool"
+    options:
+      1) call function to determine if good or need gen
+      2) call function and either get v_1 or gen (mutual recursion)
+        how? Map
+        return?
+          needs to have either the gen value
+          or provided value. Can check if provided == returned for "needed gen"
+-}
+
+data Handling = None
+              | Fold
+              | Pre
+              | Post
+    deriving Show
+
+data GTree a  where
+    Node :: Handling -> [GTree a] -> GTree a
+    Leaf :: Handling -> a -> GTree a
+        deriving Show
+
+showFirst :: GADT -> IO ()
+showFirst (_, _, x : xs) =
+    do
+        --putStrLn $ treeToString 0 $ typeTree x
+        putStrLn $ ppShow $ stringTree $ typeTree x
+        putStrLn $ conGen x
+
+stringTree :: GTree (Type SrcSpanInfo) -> GTree String
+stringTree (Leaf h ty) = Leaf h $ prettyPrint ty
+stringTree (Node h ts) = Node h $ map stringTree ts
+
+treeToString :: Int -> GTree (Type SrcSpanInfo) -> String
+treeToString level (Leaf _ ty) = prettyPrint ty
+treeToString level (Node _ ts) =
+    printf "(%s)" $ join " -> " $ map (treeToString (level + 1)) ts
+
+typeTree :: GADTConstructor -> GTree (Type SrcSpanInfo)
+typeTree (constrName, constrType, _, _) = toTree' constrType
+
+toTree' :: Type SrcSpanInfo -> GTree (Type SrcSpanInfo)
+toTree' ty = case getParts ty of
+    [x] -> toTree 1 x
+    xs  -> Node None $ map (toTree 1) xs
+
+toTree :: Int -> Type SrcSpanInfo -> GTree (Type SrcSpanInfo)
+toTree level ty@(TyFun _ t1 t2) = Node (nodeHandling "Boo" level tys) tys
+    where tys = map (toTree (level + 1)) $ getParts ty
+toTree level (TyParen _ t1)     = toTree level t1
+toTree level ty                 = Leaf (leafHandling (level - 1) "Boo" ty) ty
+
+nodeHandling gadtName level tys
+    | level == 0         = error "unknown"
+    | level `mod` 2 == 1 = nodePost gadtName tys
+    | otherwise          = nodePre tys
+
+nodePre []  = None
+nodePre (ty:tys) = case ty of
+    (Leaf Pre _) -> Pre
+    _            -> nodePre tys
+
+nodePost gadtName tys =
+    if containsGadt gadtName $ getTy $ last tys
+        then Post
+        else None
+
+isLeaf (Leaf _ _) = True
+isLeaf _ = False
+getTy (Leaf _ ty) = ty
+
+leafHandling level gadtName ty =
+    if containsGadt gadtName ty
+        then if level == 0
+            then Fold
+            else Pre
+        else None
+
+containsGadt gadtName ty = case ty of
+    TyApp _ t1 t2   -> containsGadt gadtName t1
+    TyCon _ name    -> getFromQName name == gadtName
+    _               -> False
 -- =======================================================================================
 -- |                           Validation and Error Printing                             |
 -- =======================================================================================
@@ -549,7 +687,7 @@ convertQ name x = x
 genFn :: Int -> String
 genFn n = printf "f_%d" n
 
--- Creates a string of "v_n", where # is 'n'
+-- Creates a string of "v_#", where # is 'n'
 genVar :: Int -> String
 genVar n = printf "v_%d" n
 
