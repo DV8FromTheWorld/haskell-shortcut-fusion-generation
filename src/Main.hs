@@ -66,7 +66,7 @@ main = do
                 putStrLn "---------- Input GADT ----------"
                 putStrLn $ prettyPrint gDataDecl
                 showFirst gadt
-{-
+
                 putStrLn "\n----------- Results ------------"
                 if isNothing validationResult
                     then do
@@ -79,7 +79,7 @@ main = do
                         putStrLn "The provided GADT is not a positive datatype, thus we cannot generate code for it."
                         putStrLn "\n---- Errors ----"
                         mapM_ printErrors $ fromJust validationResult
--}
+
             _ -> putStrLn "Wrong number of args. Example: shortcut-fusion-gen infile outfile"
 
 -- =======================================================================================
@@ -106,21 +106,31 @@ fold j (J y) = j (\g -> y (\r -> g (fold j r)))
 -- for a post: (fold j) . y
 
 conGen :: GADTConstructor -> String
-conGen gadtConstr = join "\n" $ map toGens' $ zip parts [1..length parts]
+conGen gadtConstr = join "\n" $ map (toGens' "fold" "j") $ zip parts [1..length parts]
+    where
+        parts = conParts gadtConstr
+
+
+
+conParts :: GADTConstructor -> [GTree (Type SrcSpanInfo)]
+conParts gadtConstr = parts
     where
         tree@(Node _ allParts) = typeTree gadtConstr
         parts = safeInit allParts
 
-toGens' (part, v) = toGens (genVar v) part
+toGens' :: String -> String -> (GTree (Type SrcSpanInfo), Int) -> String
+toGens' fn f (part, v) = toGens fn f (genVar v) part
 
-toGens v (Leaf None _)   = v
-toGens v (Leaf Fold _)   = printf "(fold j %s)" v
-toGens v (Leaf Pre _)    = printf "(fold j %s)" v
-toGens v (Node None tys) = toGens2 v tys
-toGens v (Node Pre tys)  = printf "(\\g -> %s %s)" v $ toGens2 "g" tys
-toGens v (Node Post tys) = printf "((fold j) . %s)" $ toGens2 v tys
+-- foldName, 'f_1 .. f_n', f_#, type
+toGens :: String -> String -> String -> GTree (Type SrcSpanInfo) -> String
+toGens fn f v (Leaf None _)   = v
+toGens fn f v (Leaf Fold _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
+toGens fn f v (Leaf Pre  _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
+toGens fn f v (Node None tys) = toGens2 fn f v tys
+toGens fn f v (Node Pre  tys) = printf "(\\g -> %s %s)" v $ toGens2 fn f "g" tys
+toGens fn f v (Node Post tys) = printf "((%s %s) . %s)" fn f $ toGens2 fn f v tys
 
-toGens2 vv tys = if isInfixOf tysVars tysGen
+toGens2 fn f vv tys = if isInfixOf tysVars tysGen
                  then vv
                  else printf "(\\%s -> %s %s)"
                         (join " " tysVars)
@@ -129,7 +139,7 @@ toGens2 vv tys = if isInfixOf tysVars tysGen
     where
         tysParts = safeInit tys
         tysVars  = map (\n -> printf "%s_%s" vv $ show n) [1..length tysParts]
-        tysGen   = map (\(p, v) -> toGens v p) $ zip tysParts tysVars
+        tysGen   = map (\(p, v) -> toGens fn f v p) $ zip tysParts tysVars
 {-
     needs to either be
     1) v_1  or
@@ -163,7 +173,7 @@ showFirst :: GADT -> IO ()
 showFirst (_, _, x : xs) =
     do
         --putStrLn $ treeToString 0 $ typeTree x
-        putStrLn $ ppShow $ stringTree $ typeTree x
+        --putStrLn $ ppShow $ stringTree $ typeTree x
         putStrLn $ conGen x
 
 stringTree :: GTree (Type SrcSpanInfo) -> GTree String
@@ -476,15 +486,18 @@ genFoldFunctions funcName constructors =
 --   Returns:
 --     "foldBTree f_1 f_2 (BNode v_1 v_2 v_3) = f_2 v_1 (foldBTree f_1 f_2 v_2) (foldBTree f_1 f_2 v_3)"
 genFoldFunctionLine :: String -> Int -> (Int, GADTConstructor) -> String
-genFoldFunctionLine funcName len (n, (constrName, _, _, needFolds)) =
+genFoldFunctionLine funcName len (n, constr@(constrName, _, _, needFolds)) =
     printf "%s %s (%s %s) = %s %s"
         funcName
         (genFunctions len)
         constrName
         (genVariables $ length needFolds)
-        (genFn n)
-        (join " " $ map genVarOrFoldCall (zip [1..length needFolds] needFolds))
+        fnName
+        (join " " $ map (toGens' funcName (genFunctions len)) $ zip parts [1..length parts])
+        --(join " " $ map genVarOrFoldCall (zip [1..length needFolds] needFolds))
     where
+        fnName = genFn n
+        parts = conParts constr
         genVarOrFoldCall :: (Int, Bool) -> String
         genVarOrFoldCall (n, shouldFold) =
             if shouldFold
