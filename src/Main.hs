@@ -127,8 +127,15 @@ toGens fn f v (Leaf None _)   = v
 toGens fn f v (Leaf Fold _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
 toGens fn f v (Leaf Pre  _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
 toGens fn f v (Node None tys) = toGens2 fn f v tys
-toGens fn f v (Node Pre  tys) = printf "(\\g -> %s %s)" v $ toGens2 fn f "g" tys
+toGens fn f v (Node Pre  tys) = toGens2 fn f v tys--printf "(\\g -> %s %s)" v $ toGens2 fn f "g" tys
 toGens fn f v (Node Post tys) = printf "((%s %s) . %s)" fn f $ toGens2 fn f v tys
+
+--current (wrong): (\v_3_1       -> v_3 (\g       -> v_3_1 (\g_1 -> g (foldBoo f_1 f_2 f_3 g_1))))
+--needed  (right): (\v_3_1       -> v_3 (\v_3_1_1 -> v_3_1 (foldBoo f_1 f_2 f_3 v_3_1_1)))
+
+-- Examples
+--                 (\g     g2    -> v_3 (\g_1     -> g     (foldBoo f_1 f_2 f_3 g_1))     g2)
+--                 (\v_3_1 v_3_2 -> v_3 (\v_3_1_1 -> v_3_1 (foldBoo f_1 f_2 f_3 v_3_1_1)) v_3_2)
 
 toGens2 fn f vv tys = if isInfixOf tysVars tysGen
                  then vv
@@ -769,6 +776,21 @@ buildExpr g = g Var IConst RConst PProd SIMul SRMul
 
 -- ============================
 data Boo a b where
+        Foo :: a -> (b -> Boo a b) -> ((Boo a b -> a) -> [c]) -> Boo a a
+        Joe :: a -> Boo (b -> Boo a b) Int -> Boo a a
+        Lin :: a -> (b -> Int) -> Boo a b
+
+foldBoo ::
+  (forall a b c. a -> (b -> f a b) -> ((f a b -> a) -> [c]) -> f a a) ->
+  (forall a b. a -> f (b -> Boo a b) Int -> f a a) ->
+  (forall a b. a -> (b -> Int) -> f a b) ->
+  forall a b. Boo a b -> f a b
+foldBoo f_1 f_2 f_3 (Foo v_1 v_2 v_3) = f_1 v_1 ((foldBoo f_1 f_2 f_3) . v_2) (\v_3_1 -> v_3 (\v_3_1_1 -> v_3_1 (foldBoo f_1 f_2 f_3 v_3_1_1)))
+foldBoo f_1 f_2 f_3 (Joe v_1 v_2) = f_2 v_1 (foldBoo f_1 f_2 f_3 v_2)
+foldBoo f_1 f_2 f_3 (Lin v_1 v_2) = f_3 v_1 v_2
+
+-- ============================
+{-data Boo a b where
         Foo :: a -> ([c] -> Boo a b) -> Boo a a
         Joe :: a -> Boo (b -> Boo a b) Int -> Boo a a
         Lin :: a -> (b -> Int) -> Boo a b
@@ -789,6 +811,7 @@ buildBoo :: (forall f.
       MNat c f) -> MNat c Boo
 buildBoo g = g Foo Joe Lin
 
+-}
 -- === Fold/Build Rule ===
 -- foldBoo f_1 f_2 f_3 . buildBoo g = g f_1 f_2 f_3
 
