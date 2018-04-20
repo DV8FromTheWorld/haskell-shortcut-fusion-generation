@@ -86,38 +86,26 @@ main = do
 -- =======================================================================================
 -- |                                    Type Handling                                    |
 -- =======================================================================================
---0: not GADT
---0: GADT, thus fold
---1: GADT output, thus post compose
---2: GADT input, thus pre-compose
 
-data Foo a where
-    J :: ((Foo a -> Int) -> Int) -> Foo a
+data Handling = None
+              | Fold
+              | Pre
+              | Post
+              | MapPost
+    deriving Show
 
-fold :: (((c a -> Int) -> Int) -> c a) -> Foo a -> c a
-fold j (J y) = j (\g -> y (\r -> g (fold j r)))
+data GTree a  where
+    Node :: Handling -> [GTree a] -> GTree a
+    Leaf :: Handling -> a -> GTree a
+    List :: Handling -> GTree a -> GTree a
+        deriving Show
 
--- If constructor is: (J y), replacement is j,
---  then j + below
--- for none:   y
--- for fold:   (fold j y)
-
--- These require recursion on y.
--- for a pre:  (\g -> y (\r -> g (fold j r)))
--- for a post: (fold j) . y
-
-conGen :: GADTConstructor -> String
-conGen gadtConstr = join "\n" $ map (toGens' "fold" "j") $ zip parts [1..length parts]
+conParts :: String -> GADTConstructor -> [GTree (Type SrcSpanInfo)]
+conParts gadtName gadtConstr = parts
     where
-        parts = conParts gadtConstr
-
-
-
-conParts :: GADTConstructor -> [GTree (Type SrcSpanInfo)]
-conParts gadtConstr = parts
-    where
-        tree@(Node _ allParts) = typeTree gadtConstr
+        tree@(Node _ allParts) = typeTree gadtName gadtConstr
         parts = safeInit allParts
+
 
 toGens' :: String -> String -> (GTree (Type SrcSpanInfo), Int) -> String
 toGens' fn f (part, v) = toGens fn f (genVar v) part
@@ -142,60 +130,6 @@ toGens fn f v (Node Post tys) = printf "(%s . %s)" postFn $ toGens2 fn f v tys
                    then printf "(\\%s -> %s)" (v ++ "_m") (toGens fn f (v ++ "_m") (last tys))
                    else printf "(%s %s)" fn f
 toGens fn f v (Node MapPost tys) = printf "((map (%s %s)) . %s)" fn f $ toGens2 fn f v tys
-
--- [Boo] -> Boo a
--- (Foo v1) = f (map (fold f) v1)
-
--- [[Boo]] -> Boo a
--- (Foo v1) = f (map (map (fold f)) v1)
-
--- (a -> [Boo]) -> Boo a
--- (Foo v1) = f ((map (fold f)) . v1)
--- (Foo v1) = f ((.) (map (fold f)) v1)
-
--- (a -> [[Boo]]) -> Boo a
--- (Foo v1) = f ((map (map (fold f))) . v1)
-
--- [(a -> Boo a)] -> Boo a
--- (Foo v1) = f (map (\h -> (fold f) . h) v1)
--- (Foo v1) = f (map ((.) (fold f)) v1)
-
--- [[(a -> Boo a)]] -> Boo a
--- (Foo v1) = f (map (map ((.) fold f)) v1)
-
--- [[(a -> [[Boo a]])]] -> Boo a
--- (Foo v1) = f (map (map ((.) (map (map (fold f))))) v1)
-
--- ((Boo a -> Int) -> [Boo a]) -> Boo a
--- (Foo v1) = f ((map (fold f) ) . (\v1_1 -> v1 (\v1_1_1 -> v1_1 (fold f v1_1_1))))
-
--- (([Boo a] -> Int) -> Int) -> Boo a
--- (Foo v1) = f (\v1_1 -> v1 (\v1_1_1 -> v1_1 (map (fold f) v1_1_1)))
-
--- (([[Boo a]] -> Int) -> Int) -> Boo about
--- (Foo v1) = f (\v1_1 -> v1 (\v1_1_1 -> v1_1 (map (map (fold f)) v1_1_1)))
-
--- (a -> [(a -> Boo a)]) -> Boo a
--- (Foo v1) = f ((map ((.) (fold f))) . v1
-
--- _              :    _                : List None        : J v_1
--- []             : (map f)             : List Map         : J (map (fold f) v_1)
--- (a -> [Boo])   : ((.) (map f))       : List ComposeMap  : J ((map (fold f)) . v_1) : Post - Map
--- [(a -> Boo)]   : (map ((.) f))       : List MapCompose  : J (map
--- [(a -> [Boo])] : (map ((.) (map f))) :                  : J (map ((.) (map (fold f))) v1) : J (map (\h -> (map (fold f)) . h) v1)
--- [((Boo -> a) -> Int)]          : map (\v_n_1 -> v_n (\v_n_1_1 -> v_n_1 (fold f v_n_1_1))) v1
--- [(([Boo] -> a) -> Int)]        : map (\v_n_1 -> v_n (\v_n_1_1 -> v_n_1 (map (fold f) v_n_1_1))) v1
--- [(((a -> [Boo]) -> a) -> Int)] : map (\v_n_1 -> v_n (\v_n_1_1 -> v_n_1 ((map (fold f)) . v_n_1_1))) v1
--- ([(Boo -> Bool)] -> Int)       : (\v_1_1 -> v_1 (map (\v_1_1_1 -> fold f ... ?
---
-
---current (wrong): (\v_3_1       -> v_3 (\g       -> v_3_1 (\g_1 -> g (foldBoo f_1 f_2 f_3 g_1))))
---needed  (right): (\v_3_1       -> v_3 (\v_3_1_1 -> v_3_1 (foldBoo f_1 f_2 f_3 v_3_1_1)))
-
--- Examples
---                 (\g     g2    -> v_3 (\g_1     -> g     (foldBoo f_1 f_2 f_3 g_1))     g2)
---                 (\v_3_1 v_3_2 -> v_3 (\v_3_1_1 -> v_3_1 (foldBoo f_1 f_2 f_3 v_3_1_1)) v_3_2)
-
 toGens2 fn f vv tys = if isInfixOf tysVars tysGen
                  then vv
                  else printf "(\\%s -> %s %s)"
@@ -206,71 +140,22 @@ toGens2 fn f vv tys = if isInfixOf tysVars tysGen
         tysParts = safeInit tys
         tysVars  = map (\n -> printf "%s_%s" vv $ show n) [1..length tysParts]
         tysGen   = map (\(p, v) -> toGens fn f v p) $ zip tysParts tysVars
-{-
-    needs to either be
-    1) v_1  or
-    2) (\x_1 x_2 x_3 -> v_1 x_1 (toGens x_2 ty) (toGens x_3 ty))
 
-    1: if all parts are Leaf, or all are Node-None (recursively)
-    2: else
+typeTree :: String -> GADTConstructor -> GTree (Type SrcSpanInfo)
+typeTree gadtName (constrName, constrType, _, _) = toTree' gadtName constrType
 
-    question: Can we do this without a "bool"
-    options:
-      1) call function to determine if good or need gen
-      2) call function and either get v_1 or gen (mutual recursion)
-        how? Map
-        return?
-          needs to have either the gen value
-          or provided value. Can check if provided == returned for "needed gen"
--}
+toTree' :: String -> Type SrcSpanInfo -> GTree (Type SrcSpanInfo)
+toTree' gadtName ty = case getParts ty of
+    [x] -> toTree gadtName 1 x
+    xs  -> Node None $ map (toTree gadtName 1) xs
 
-data Handling = None
-              | Fold
-              | Pre
-              | Post
-              | MapPost
-    deriving Show
-
-data GTree a  where
-    Node :: Handling -> [GTree a] -> GTree a
-    Leaf :: Handling -> a -> GTree a
-    List :: Handling -> GTree a -> GTree a
-        deriving Show
-
-showFirst :: GADT -> IO ()
-showFirst (_, _, x : xs) =
-    do
-        putStrLn "{-"
-        --putStrLn $ treeToString 0 $ typeTree x
-        putStrLn $ ppShow $ stringTree $ typeTree x
-        --putStrLn $ conGen x
-        putStrLn "-}"
-
-stringTree :: GTree (Type SrcSpanInfo) -> GTree String
-stringTree (Leaf h ty) = Leaf h $ prettyPrint ty
-stringTree (Node h ts) = Node h $ map stringTree ts
-stringTree (List h tt) = List h $ stringTree tt
-
-treeToString :: Int -> GTree (Type SrcSpanInfo) -> String
-treeToString level (Leaf _ ty) = prettyPrint ty
-treeToString level (Node _ ts) =
-    printf "(%s)" $ join " -> " $ map (treeToString (level + 1)) ts
-
-typeTree :: GADTConstructor -> GTree (Type SrcSpanInfo)
-typeTree (constrName, constrType, _, _) = toTree' constrType
-
-toTree' :: Type SrcSpanInfo -> GTree (Type SrcSpanInfo)
-toTree' ty = case getParts ty of
-    [x] -> toTree 1 x
-    xs  -> Node None $ map (toTree 1) xs
-
-toTree :: Int -> Type SrcSpanInfo -> GTree (Type SrcSpanInfo)
-toTree level ty@(TyFun _ t1 t2) = Node (nodeHandling "Boo" level tys) tys
-    where tys = map (toTree (level + 1)) $ getParts ty
-toTree level (TyList _ t1)      = List (listHandling "Boo" (level - 1) t1) tyTree
-    where tyTree = toTree level t1
-toTree level (TyParen _ t1)     = toTree level t1
-toTree level ty                 = Leaf (leafHandling "Boo" (level - 1) ty) ty
+toTree :: String -> Int -> Type SrcSpanInfo -> GTree (Type SrcSpanInfo)
+toTree gadtName level ty@(TyFun _ t1 t2) = Node (nodeHandling gadtName level tys) tys
+    where tys = map (toTree gadtName (level + 1)) $ getParts ty
+toTree gadtName level (TyList _ t1)      = List (listHandling gadtName (level - 1) t1) tyTree
+    where tyTree = toTree gadtName level t1
+toTree gadtName level (TyParen _ t1)     = toTree gadtName level t1
+toTree gadtName level ty                 = Leaf (leafHandling gadtName (level - 1) ty) ty
 
 listHandling gadtName level ty =
     if containsGadt gadtName ty
@@ -303,8 +188,11 @@ isLeaf _ = False
 isList (List _ _) = True
 isList _ = False
 
-getTy (Leaf _ ty) = ty
-getTy (List _ tt) = getTy tt
+--can't handle: Foo :: (a -> [(a -> Boo a b)]) -> Boo a b
+-- Needs Node handling, which doesn't work with this system.
+-- Needs complete rework
+getTy (Leaf _ ty)  = ty
+getTy (List _ tt)  = getTy tt
 
 leafHandling gadtName level ty =
     if containsGadt gadtName ty
@@ -465,7 +353,7 @@ genFold (gadtName, gadtHead, constructors) =
         (join " " $ getTypeVariablesHead gadtHead)
         (prettyPrint gadtHead)
         (prettyPrint $ convertHead gadtHead)
-        (genFoldFunctions funcName constructors)
+        (genFoldFunctions gadtName funcName constructors)
     where funcName = "fold" ++ gadtName
 
 -- Generates the Build function for a GADT
@@ -554,15 +442,16 @@ genTypeLine gadtName (_, constrType, typeVariables, _) =
 --   Returns: foldExpr f_1 f_2 f_3 f_4 f_5 f_6 (Var v_1) = f_1 v_1
 --     "foldBTree f_1 f_2 (BLeaf v_1) = f_1 v_1\n
 --      foldBTree f_1 f_2 (BNode v_1 v_2 v_3) = f_2 v_1 (foldBTree f_1 f_2 v_2) (foldBTree f_1 f_2 v_3)"
-genFoldFunctions :: String -> [GADTConstructor] -> String
-genFoldFunctions funcName constructors =
-    (join "\n" $ map (genFoldFunctionLine funcName len) $ zip [1..len] constructors)
+genFoldFunctions :: String -> String -> [GADTConstructor] -> String
+genFoldFunctions gadtName funcName constructors =
+    (join "\n" $ map (genFoldFunctionLine gadtName funcName len) $ zip [1..len] constructors)
     where len = length constructors
 
 -- A helper function for  genFoldFunctions, this function generates a single
 -- function body line, based on the GADT data constructor provided to it.
 --
 -- params:
+--  gadtName:   Name of the GADT                                                                  (example, for BTree:             "BTree")
 --  funcName:   Name of the fold function, which is the concatination of "fold" and the GADT name (example, for BTree:         "foldBTree")
 --  len:        The total amount of data constructors in the GADT.                                (example, for BTree:                   2)
 --  n:          The number of the replacement function to use for this line. (f_n)                (example, for BNode:                   2)
@@ -574,8 +463,8 @@ genFoldFunctions funcName constructors =
 --     genFoldFunctionLine "BTree" 2 AST(BNode)
 --   Returns:
 --     "foldBTree f_1 f_2 (BNode v_1 v_2 v_3) = f_2 v_1 (foldBTree f_1 f_2 v_2) (foldBTree f_1 f_2 v_3)"
-genFoldFunctionLine :: String -> Int -> (Int, GADTConstructor) -> String
-genFoldFunctionLine funcName len (n, constr@(constrName, _, _, needFolds)) =
+genFoldFunctionLine :: String -> String -> Int -> (Int, GADTConstructor) -> String
+genFoldFunctionLine gadtName funcName len (n, constr@(constrName, _, _, needFolds)) =
     printf "%s %s (%s %s) = %s %s"
         funcName
         (genFunctions len)
@@ -586,7 +475,7 @@ genFoldFunctionLine funcName len (n, constr@(constrName, _, _, needFolds)) =
         --(join " " $ map genVarOrFoldCall (zip [1..length needFolds] needFolds))
     where
         fnName = genFn n
-        parts = conParts constr
+        parts = conParts gadtName constr
         genVarOrFoldCall :: (Int, Bool) -> String
         genVarOrFoldCall (n, shouldFold) =
             if shouldFold
@@ -942,5 +831,24 @@ getLevels n (TyParen l t@(TyFun _ _ _)) = getLevels (n + 1) t
 getLevels n (TyParen l t)   = getLevels n t -- [(n + 1, t)]
 getLevels n t               = [(n, t)]
 -}
+
+showFirst :: GADT -> IO ()
+showFirst (gadtName, _, x : xs) =
+    do
+        putStrLn "{-"
+        --putStrLn $ treeToString 0 $ typeTree gadtName x
+        putStrLn $ ppShow $ stringTree $ typeTree gadtName x
+        --putStrLn $ conGen x
+        putStrLn "-}"
+
+stringTree :: GTree (Type SrcSpanInfo) -> GTree String
+stringTree (Leaf h ty) = Leaf h $ prettyPrint ty
+stringTree (Node h ts) = Node h $ map stringTree ts
+stringTree (List h tt) = List h $ stringTree tt
+
+treeToString :: Int -> GTree (Type SrcSpanInfo) -> String
+treeToString level (Leaf _ ty) = prettyPrint ty
+treeToString level (Node _ ts) =
+    printf "(%s)" $ join " -> " $ map (treeToString (level + 1)) ts
 
 
