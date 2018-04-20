@@ -7,10 +7,11 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE MultiWayIf #-}
 
 module Main where
 
-import Language.Haskell.Exts hiding (layout, Var)
+import Language.Haskell.Exts hiding (layout, Var, List)
 import Text.Show.Pretty (ppShow)
 import System.Environment
 import Data.List (nub, isInfixOf)
@@ -123,12 +124,70 @@ toGens' fn f (part, v) = toGens fn f (genVar v) part
 
 -- foldName, 'f_1 .. f_n', f_#, type
 toGens :: String -> String -> String -> GTree (Type SrcSpanInfo) -> String
+toGens fn f v (List _ ty)     =
+    if result /= v
+        then printf "(map (\\%s -> %s) %s)" (v ++ "_1") result v
+        else v
+    where result = toGens fn f (v ++ "_1") ty
 toGens fn f v (Leaf None _)   = v
 toGens fn f v (Leaf Fold _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
 toGens fn f v (Leaf Pre  _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
 toGens fn f v (Node None tys) = toGens2 fn f v tys
 toGens fn f v (Node Pre  tys) = toGens2 fn f v tys--printf "(\\g -> %s %s)" v $ toGens2 fn f "g" tys
-toGens fn f v (Node Post tys) = printf "((%s %s) . %s)" fn f $ toGens2 fn f v tys
+--toGens fn f v (Node Post tys) = printf "((%s %s) . %s)" fn f $ toGens2 fn f v tys
+toGens fn f v (Node Post tys) = printf "(%s . %s)" postFn $ toGens2 fn f v tys
+    where
+        postFn :: String
+        postFn = if isList $ last tys
+                   then printf "(\\%s -> %s)" (v ++ "_m") (toGens fn f (v ++ "_m") (last tys))
+                   else printf "(%s %s)" fn f
+toGens fn f v (Node MapPost tys) = printf "((map (%s %s)) . %s)" fn f $ toGens2 fn f v tys
+
+-- [Boo] -> Boo a
+-- (Foo v1) = f (map (fold f) v1)
+
+-- [[Boo]] -> Boo a
+-- (Foo v1) = f (map (map (fold f)) v1)
+
+-- (a -> [Boo]) -> Boo a
+-- (Foo v1) = f ((map (fold f)) . v1)
+-- (Foo v1) = f ((.) (map (fold f)) v1)
+
+-- (a -> [[Boo]]) -> Boo a
+-- (Foo v1) = f ((map (map (fold f))) . v1)
+
+-- [(a -> Boo a)] -> Boo a
+-- (Foo v1) = f (map (\h -> (fold f) . h) v1)
+-- (Foo v1) = f (map ((.) (fold f)) v1)
+
+-- [[(a -> Boo a)]] -> Boo a
+-- (Foo v1) = f (map (map ((.) fold f)) v1)
+
+-- [[(a -> [[Boo a]])]] -> Boo a
+-- (Foo v1) = f (map (map ((.) (map (map (fold f))))) v1)
+
+-- ((Boo a -> Int) -> [Boo a]) -> Boo a
+-- (Foo v1) = f ((map (fold f) ) . (\v1_1 -> v1 (\v1_1_1 -> v1_1 (fold f v1_1_1))))
+
+-- (([Boo a] -> Int) -> Int) -> Boo a
+-- (Foo v1) = f (\v1_1 -> v1 (\v1_1_1 -> v1_1 (map (fold f) v1_1_1)))
+
+-- (([[Boo a]] -> Int) -> Int) -> Boo about
+-- (Foo v1) = f (\v1_1 -> v1 (\v1_1_1 -> v1_1 (map (map (fold f)) v1_1_1)))
+
+-- (a -> [(a -> Boo a)]) -> Boo a
+-- (Foo v1) = f ((map ((.) (fold f))) . v1
+
+-- _              :    _                : List None        : J v_1
+-- []             : (map f)             : List Map         : J (map (fold f) v_1)
+-- (a -> [Boo])   : ((.) (map f))       : List ComposeMap  : J ((map (fold f)) . v_1) : Post - Map
+-- [(a -> Boo)]   : (map ((.) f))       : List MapCompose  : J (map
+-- [(a -> [Boo])] : (map ((.) (map f))) :                  : J (map ((.) (map (fold f))) v1) : J (map (\h -> (map (fold f)) . h) v1)
+-- [((Boo -> a) -> Int)]          : map (\v_n_1 -> v_n (\v_n_1_1 -> v_n_1 (fold f v_n_1_1))) v1
+-- [(([Boo] -> a) -> Int)]        : map (\v_n_1 -> v_n (\v_n_1_1 -> v_n_1 (map (fold f) v_n_1_1))) v1
+-- [(((a -> [Boo]) -> a) -> Int)] : map (\v_n_1 -> v_n (\v_n_1_1 -> v_n_1 ((map (fold f)) . v_n_1_1))) v1
+-- ([(Boo -> Bool)] -> Int)       : (\v_1_1 -> v_1 (map (\v_1_1_1 -> fold f ... ?
+--
 
 --current (wrong): (\v_3_1       -> v_3 (\g       -> v_3_1 (\g_1 -> g (foldBoo f_1 f_2 f_3 g_1))))
 --needed  (right): (\v_3_1       -> v_3 (\v_3_1_1 -> v_3_1 (foldBoo f_1 f_2 f_3 v_3_1_1)))
@@ -169,23 +228,28 @@ data Handling = None
               | Fold
               | Pre
               | Post
+              | MapPost
     deriving Show
 
 data GTree a  where
     Node :: Handling -> [GTree a] -> GTree a
     Leaf :: Handling -> a -> GTree a
+    List :: Handling -> GTree a -> GTree a
         deriving Show
 
 showFirst :: GADT -> IO ()
 showFirst (_, _, x : xs) =
     do
+        putStrLn "{-"
         --putStrLn $ treeToString 0 $ typeTree x
-        --putStrLn $ ppShow $ stringTree $ typeTree x
-        putStrLn $ conGen x
+        putStrLn $ ppShow $ stringTree $ typeTree x
+        --putStrLn $ conGen x
+        putStrLn "-}"
 
 stringTree :: GTree (Type SrcSpanInfo) -> GTree String
 stringTree (Leaf h ty) = Leaf h $ prettyPrint ty
 stringTree (Node h ts) = Node h $ map stringTree ts
+stringTree (List h tt) = List h $ stringTree tt
 
 treeToString :: Int -> GTree (Type SrcSpanInfo) -> String
 treeToString level (Leaf _ ty) = prettyPrint ty
@@ -203,8 +267,18 @@ toTree' ty = case getParts ty of
 toTree :: Int -> Type SrcSpanInfo -> GTree (Type SrcSpanInfo)
 toTree level ty@(TyFun _ t1 t2) = Node (nodeHandling "Boo" level tys) tys
     where tys = map (toTree (level + 1)) $ getParts ty
+toTree level (TyList _ t1)      = List (listHandling "Boo" (level - 1) t1) tyTree
+    where tyTree = toTree level t1
 toTree level (TyParen _ t1)     = toTree level t1
-toTree level ty                 = Leaf (leafHandling (level - 1) "Boo" ty) ty
+toTree level ty                 = Leaf (leafHandling "Boo" (level - 1) ty) ty
+
+listHandling gadtName level ty =
+    if containsGadt gadtName ty
+        then if
+            | level == 0         -> Fold
+            | level `mod` 2 == 1 -> Post
+            | otherwise          -> Pre
+        else None
 
 nodeHandling gadtName level tys
     | level == 0         = error "unknown"
@@ -218,19 +292,27 @@ nodePre (ty:tys) = case ty of
 
 nodePost gadtName tys =
     if containsGadt gadtName $ getTy $ last tys
-        then Post
+        then if isList $ last tys
+            then Post--MapPost
+            else Post
         else None
 
 isLeaf (Leaf _ _) = True
 isLeaf _ = False
-getTy (Leaf _ ty) = ty
 
-leafHandling level gadtName ty =
+isList (List _ _) = True
+isList _ = False
+
+getTy (Leaf _ ty) = ty
+getTy (List _ tt) = getTy tt
+
+leafHandling gadtName level ty =
     if containsGadt gadtName ty
         then if level == 0
             then Fold
             else Pre
         else None
+
 
 containsGadt gadtName ty = case ty of
     TyApp _ t1 t2   -> containsGadt gadtName t1
@@ -630,6 +712,7 @@ shouldFold gadtName constrType = safeInit $ shouldFold' gadtName constrType   --
 shouldFold' gadtName constrType = case constrType of                          -- as it is always the GADT type and should not be considered when generating a list
     TyFun _ t1 t2   -> shouldFold' gadtName t1 ++ shouldFold' gadtName t2     -- of constructor variables.
     TyCon _ name    -> [getFromQName name == gadtName]
+    TyList _ t1     -> shouldFold' gadtName t1
     TyApp _ t1 t2   -> shouldFoldApp gadtName t1
     TyVar _ name    -> [False]
     TyParen _ t1    -> [False]
@@ -686,9 +769,12 @@ convertHead (DHead l (Ident l2 name)) = DHead l (Ident l2 "f")
 --
 -- This means that if we use prettyPrint, it would print "a -> f a b -> f a b -> f a b"
 convert :: String -> Type l -> Type l
-convert name (TyFun l t1 t2) = TyFun l (convert name t1) (convert name t2)
-convert name (TyApp l t1 t2) = TyApp l (convert name t1) (convert name t2)
-convert name (TyCon l qname) = TyCon l (convertQ name qname)
+convert name (TyTuple l l2 tys) = TyTuple l l2 $ map (convert name) tys
+convert name (TyList l t1)      = TyList l (convert name t1)
+convert name (TyParen l t1)     = TyParen l (convert name t1)
+convert name (TyFun l t1 t2)    = TyFun l (convert name t1) (convert name t2)
+convert name (TyApp l t1 t2)    = TyApp l (convert name t1) (convert name t2)
+convert name (TyCon l qname)    = TyCon l (convertQ name qname)
 convert name x = x
 
 -- Changes the identifier of a Unqualified Name to "f" if the provided "name"
