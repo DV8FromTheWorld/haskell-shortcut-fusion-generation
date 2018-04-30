@@ -11,7 +11,7 @@
 
 module Main where
 
-import Language.Haskell.Exts hiding (layout, Var, List)
+import Language.Haskell.Exts hiding (layout, Var, List, Tuple)
 import Text.Show.Pretty (ppShow)
 import System.Environment
 import Data.List (nub, isInfixOf)
@@ -91,13 +91,13 @@ data Handling = None
               | Fold
               | Pre
               | Post
-              | MapPost
     deriving Show
 
 data GTree a  where
-    Node :: Handling -> [GTree a] -> GTree a
-    Leaf :: Handling -> a -> GTree a
-    List :: Handling -> GTree a -> GTree a
+    Node  :: Handling -> [GTree a] -> GTree a
+    Leaf  :: Handling -> a -> GTree a
+    List  :: GTree a -> GTree a
+    Tuple :: [GTree a] -> GTree a
         deriving Show
 
 conParts :: String -> GADTConstructor -> [GTree (Type SrcSpanInfo)]
@@ -112,11 +112,23 @@ toGens' fn f (part, v) = toGens fn f (genVar v) part
 
 -- foldName, 'f_1 .. f_n', f_#, type
 toGens :: String -> String -> String -> GTree (Type SrcSpanInfo) -> String
-toGens fn f v (List _ ty)     =
+toGens fn f v (List ty)     =
     if result /= v
         then printf "(map (\\%s -> %s) %s)" (v ++ "_1") result v
         else v
     where result = toGens fn f (v ++ "_1") ty
+toGens fn f v (Tuple tys)     =
+    if isInfixOf tysVars tysGen
+        then v
+        else printf "(mapTuple_%s %s %s)" (show $ length tys) (join " " tysCombo) v
+    where
+        tysVars  = map (\n -> printf "%s_%s" v $ show n) [1..length tys]
+        tysGen   = map (\(p, v) -> toGens fn f v p) $ zip tys tysVars
+        tysCombo = map genCombo $ zip tysVars tysGen
+        genCombo (v, g) = if v == g
+                        then "id"
+                        else printf "(%s -> %s)" v g
+
 toGens fn f v (Leaf None _)   = v
 toGens fn f v (Leaf Fold _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
 toGens fn f v (Leaf Pre  _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
@@ -126,10 +138,10 @@ toGens fn f v (Node Pre  tys) = toGens2 fn f v tys--printf "(\\g -> %s %s)" v $ 
 toGens fn f v (Node Post tys) = printf "(%s . %s)" postFn $ toGens2 fn f v tys
     where
         postFn :: String
-        postFn = if isList $ last tys
+        postFn = if ((isList $ last tys) || (isTuple $ last tys))
                    then printf "(\\%s -> %s)" (v ++ "_m") (toGens fn f (v ++ "_m") (last tys))
                    else printf "(%s %s)" fn f
-toGens fn f v (Node MapPost tys) = printf "((map (%s %s)) . %s)" fn f $ toGens2 fn f v tys
+
 toGens2 fn f vv tys = if isInfixOf tysVars tysGen
                  then vv
                  else printf "(\\%s -> %s %s)"
@@ -152,18 +164,11 @@ toTree' gadtName ty = case getParts ty of
 toTree :: String -> Int -> Type SrcSpanInfo -> GTree (Type SrcSpanInfo)
 toTree gadtName level ty@(TyFun _ t1 t2) = Node (nodeHandling gadtName level tys) tys
     where tys = map (toTree gadtName (level + 1)) $ getParts ty
-toTree gadtName level (TyList _ t1)      = List (listHandling gadtName (level - 1) t1) tyTree
+toTree gadtName level (TyList _ t1)      = List tyTree
     where tyTree = toTree gadtName level t1
+toTree gadtName level (TyTuple _ _ tys) = Tuple $ map (toTree gadtName level) tys
 toTree gadtName level (TyParen _ t1)     = toTree gadtName level t1
 toTree gadtName level ty                 = Leaf (leafHandling gadtName (level - 1) ty) ty
-
-listHandling gadtName level ty =
-    if containsGadt gadtName ty
-        then if
-            | level == 0         -> Fold
-            | level `mod` 2 == 1 -> Post
-            | otherwise          -> Pre
-        else None
 
 nodeHandling gadtName level tys
     | level == 0         = error "unknown"
@@ -185,14 +190,20 @@ nodePost gadtName tys =
 isLeaf (Leaf _ _) = True
 isLeaf _ = False
 
-isList (List _ _) = True
+isList (List _) = True
 isList _ = False
+
+isTuple (Tuple _) = True
+isTuple _ = False
 
 --can't handle: Foo :: (a -> [(a -> Boo a b)]) -> Boo a b
 -- Needs Node handling, which doesn't work with this system.
 -- Needs complete rework
+getTy :: GTree (Type SrcSpanInfo) -> Type SrcSpanInfo
 getTy (Leaf _ ty)  = ty
-getTy (List _ tt)  = getTy tt
+getTy (List tt)  = getTy tt
+getTy (Node _ tys) = getTy $ last tys
+getTy (Tuple tt) = TyTuple noSrcSpan Boxed $ map getTy tt
 
 leafHandling gadtName level ty =
     if containsGadt gadtName ty
@@ -203,6 +214,8 @@ leafHandling gadtName level ty =
 
 
 containsGadt gadtName ty = case ty of
+    TyTuple _ _ tys   -> or $ map (containsGadt gadtName) tys
+    TyList _ ty     -> containsGadt gadtName ty
     TyApp _ t1 t2   -> containsGadt gadtName t1
     TyCon _ name    -> getFromQName name == gadtName
     _               -> False
@@ -602,6 +615,7 @@ shouldFold' gadtName constrType = case constrType of                          --
     TyFun _ t1 t2   -> shouldFold' gadtName t1 ++ shouldFold' gadtName t2     -- of constructor variables.
     TyCon _ name    -> [getFromQName name == gadtName]
     TyList _ t1     -> shouldFold' gadtName t1
+    TyTuple _ _ tys -> [True] -- wrong
     TyApp _ t1 t2   -> shouldFoldApp gadtName t1
     TyVar _ name    -> [False]
     TyParen _ t1    -> [False]
@@ -844,7 +858,8 @@ showFirst (gadtName, _, x : xs) =
 stringTree :: GTree (Type SrcSpanInfo) -> GTree String
 stringTree (Leaf h ty) = Leaf h $ prettyPrint ty
 stringTree (Node h ts) = Node h $ map stringTree ts
-stringTree (List h tt) = List h $ stringTree tt
+stringTree (List tt) = List $ stringTree tt
+stringTree (Tuple tt) = Tuple $ map stringTree tt
 
 treeToString :: Int -> GTree (Type SrcSpanInfo) -> String
 treeToString level (Leaf _ ty) = prettyPrint ty
