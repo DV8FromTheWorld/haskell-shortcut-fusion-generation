@@ -86,7 +86,7 @@ main = do
                         putStrLn "\n---- Errors ----"
                         mapM_ printErrors $ fromJust validationResult
 
-            _ -> putStrLn "Wrong number of args. Example: shortcut-fusion-gen infile outfile"
+            _ -> putStrLn "Wrong number of args. Usage: scf-gen <infile> <outfile>"
 
 -- =======================================================================================
 -- |                                    Type Handling                                    |
