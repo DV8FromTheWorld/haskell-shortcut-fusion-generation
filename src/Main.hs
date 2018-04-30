@@ -48,6 +48,10 @@ type GADTConstructor = (String, Type SrcSpanInfo, [String], [Bool])
 type ConstructorErrorDetail = (String, [TypeErrorDetail])
 type TypeErrorDetail = ([Type SrcSpanInfo], String)
 
+languageFlags = "{-# LANGUAGE GADTs #-}\n\
+                \{-# LANGUAGE ExplicitForAll #-}\n\
+                \{-# LANGUAGE RankNTypes #-}"
+
 -- main for generator. calls functions to read in filenames, run the
 -- generator and write the output file
 main :: IO ()
@@ -71,9 +75,10 @@ main = do
                 putStrLn "\n----------- Results ------------"
                 if isNothing validationResult
                     then do
+                        putStrLn (languageFlags ++ "\n")
                         putStrLn genResult
-                        writeFile ofile $ printf "%s\n\n%s" (prettyPrint gDataDecl) genResult  -- Generate Code
-                        --writeFile ofile $ parseResult                                        -- Abstract Syntax
+                        writeFile ofile $ printf "%s\n\n%s\n\n%s" languageFlags (prettyPrint gDataDecl) genResult  -- Generate Code
+                        --writeFile ofile $ parseResult                                                            -- Abstract Syntax
                         putStrLn $ printf "\nGeneration successful. Result also saved at: %s\n" ofile
 
                     else do
@@ -127,7 +132,7 @@ toGens fn f v (Tuple tys)     =
         tysCombo = map genCombo $ zip tysVars tysGen
         genCombo (v, g) = if v == g
                         then "id"
-                        else printf "(%s -> %s)" v g
+                        else printf "(\\%s -> %s)" v g
 
 toGens fn f v (Leaf None _)   = v
 toGens fn f v (Leaf Fold _)   = printf "(%s %s %s)" fn f v --('foldName' 'f_1 f_2' 'v_1')
@@ -211,6 +216,17 @@ leafHandling gadtName level ty =
             then Fold
             else Pre
         else None
+
+getTupleCounts :: String -> GTree (Type SrcSpanInfo) -> [Int]
+getTupleCounts gadtName gty = nub $ getTupleCounts' gadtName gty
+getTupleCounts' gadtName gty = case gty of
+    (Leaf _ ty)  -> []
+    (List tt)    -> getTupleCounts' gadtName tt
+    (Node _ tys) -> concat $ map (getTupleCounts' gadtName) tys
+    t@(Tuple tys)  -> if (containsGadt gadtName $ getTy t)
+                    then [length tys] ++ childTupleCounts
+                    else childTupleCounts
+        where childTupleCounts = concat $ map (getTupleCounts' gadtName) tys
 
 
 containsGadt gadtName ty = case ty of
@@ -342,12 +358,14 @@ handlePathLine (typePath, level) =
 -- This is the main entry for generation.
 genAllFunctions :: GADT -> String
 genAllFunctions gadt =
-    printf "type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2\n\
+    printf "type MNat f g = forall c1 c2. f c1 c2 -> g c1 c2\n\n\
+           \%s\n\
            \\n\
            \%s\n\n\
            \%s\n\n\
            \-- === Fold/Build Rule ===\n\
            \-- %s"
+           (genHelpers gadt)
            (genFold gadt)
            (genBuild gadt)
            (genRule gadt)
@@ -397,6 +415,14 @@ genRule (gadtName, _, constructors) =
         ("build" ++ gadtName)
         functions
     where functions = genFunctions $ length constructors
+
+genHelpers :: GADT -> String
+genHelpers (gadtName, _, constructors) = join "\n" tupleFuns
+    where
+        constrTrees = map (typeTree gadtName) constructors
+        tupleCounts = nub $ concat $ map (getTupleCounts gadtName) constrTrees
+        tupleFuns   = map genTupleMap tupleCounts
+
 
 
 -- =======================================================================================
@@ -494,6 +520,29 @@ genFoldFunctionLine gadtName funcName len (n, constr@(constrName, _, _, needFold
             if shouldFold
             then printf "(%s %s v_%d)" funcName (genFunctions len) n
             else genVar n
+
+genTupleMap :: Int -> String
+genTupleMap n =
+    printf "%s :: %s -> (%s) -> (%s)\n\
+           \%s %s (%s) = (%s)"
+           functionName
+           (join " -> " mapFunctionsTypes)
+           (join ", " startingTypes)
+           (join ", " endingTypes)
+           functionName
+           (genFunctions n)
+           (join ", " $ map genVar [1 .. n])
+           (join ", " appliedFnsVars)
+    where
+        functionName :: String
+        functionName      = printf "mapTuple_%d" n
+        typePairs         = genTypePairs n
+        startingTypes     = map fst typePairs
+        endingTypes       = map snd typePairs
+        mapFunctionsTypes = map (\(t, t') -> printf "(%s -> %s)" t t') typePairs
+        mapFunctions      = map genFn  [1 .. n]
+        variables         = map genVar [1 .. n]
+        appliedFnsVars    = map (\(f, v) -> printf "%s %s" f v) $ zip mapFunctions variables
 
 -- Simplifies a complex AST for a GADT into a simpler, easier to use GADT representation
 -- Refer to the GADT type synonym for more information.
@@ -700,6 +749,9 @@ genFn n = printf "f_%d" n
 genVar :: Int -> String
 genVar n = printf "v_%d" n
 
+genTypePair :: Int -> (String, String)
+genTypePair n = (printf "t_%d" n, printf "t_%d'" n)
+
 -- Creates a string of "f_1 f_2 f_3 .. f_n", given 'n'
 genFunctions :: Int -> String
 genFunctions len = join " " $ map genFn [1..len]
@@ -707,6 +759,9 @@ genFunctions len = join " " $ map genFn [1..len]
 -- Creates a string of "v_1 v_2 v_3 .. v_n", given 'n'
 genVariables :: Int -> String
 genVariables len = join " " $ map genVar [1..len]
+
+genTypePairs :: Int -> [(String, String)]
+genTypePairs n = map genTypePair [1 .. n]
 
 -- Similar to Javascript's .join(string) function, concats all items in a list
 -- with a separator between each item.
