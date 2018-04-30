@@ -228,7 +228,6 @@ getTupleCounts' gadtName gty = case gty of
                     else childTupleCounts
         where childTupleCounts = concat $ map (getTupleCounts' gadtName) tys
 
-
 containsGadt gadtName ty = case ty of
     TyTuple _ _ tys   -> or $ map (containsGadt gadtName) tys
     TyList _ ty     -> containsGadt gadtName ty
@@ -240,53 +239,59 @@ containsGadt gadtName ty = case ty of
 -- =======================================================================================
 
 validateGadt :: GADT -> Maybe [ConstructorErrorDetail]
-validateGadt (gadtName, _, constructors) = maybeListToMaybe $ map (validateGadtConstructor gadtName) constructors
+validateGadt (gadtName, gadtHead, constructors) = maybeListToMaybe $ map (validateGadtConstructor gadtHead) constructors
 
 -- this can be considered level 0
-validateGadtConstructor :: String -> GADTConstructor -> Maybe ConstructorErrorDetail
-validateGadtConstructor gadtName (constrName, constrType, _, _) = addConstructorName constrName $ mergeAndAddParent constrType $ map (isValid checkArgs gadtName) (getParts constrType)
+validateGadtConstructor :: DeclHead SrcSpanInfo -> GADTConstructor -> Maybe ConstructorErrorDetail
+validateGadtConstructor gadtHead (constrName, constrType, _, _) = addConstructorName constrName $ mergeAndAddParent constrType $ map (isValid checkArgs gadtHead) (getParts constrType)
 
 -- if args aren't GADT. (levels 1, 3, 5, etc)
-checkArgs :: String -> Type SrcSpanInfo -> Maybe [TypeErrorDetail]
-checkArgs ident ty = if (not . null) argErrors
+checkArgs :: DeclHead SrcSpanInfo -> Type SrcSpanInfo -> Maybe [TypeErrorDetail]
+checkArgs gadtHead ty = if (not . null) argErrors
                      then Just argErrors
                      else partErrors
     where
         parts            = getParts ty
         args             = safeInit parts
-        argErrors        = map toArgError $ filter (hasIdent ident) args
-        partErrors       = mergeAndAddParent ty $ map (isValid checkOutput ident) parts
+        argErrors        = map toArgError $ filter (hasIdent gadtHead) args
+        partErrors       = mergeAndAddParent ty $ map (isValid checkOutput gadtHead) parts
         toArgError arg = ([ty, arg], "Contains the GADT {where} it shouldn't (args)")
 
 -- if output isn't GADT. (levels 2, 4, 6, etc)
-checkOutput :: String -> Type SrcSpanInfo -> Maybe [TypeErrorDetail]
-checkOutput ident ty = if hasIdent ident output
+checkOutput :: DeclHead SrcSpanInfo -> Type SrcSpanInfo -> Maybe [TypeErrorDetail]
+checkOutput gadtHead ty = if hasIdent gadtHead output
                        then Just [outputError]
                        else partErrors
     where
         parts              = getParts ty
         output             = last parts
-        partErrors         = mergeAndAddParent ty $ map (isValid checkArgs ident) parts
+        partErrors         = mergeAndAddParent ty $ map (isValid checkArgs gadtHead) parts
         outputError        = ([ty, output], "Contains GADT {where} it shouldn't (output)")
 
-hasIdent ident ty = case ty of
-    TyForall _ _ _ t          -> hasIdent ident t
-    TyParen _ t               -> hasIdent ident t
-    TyList _ t                -> hasIdent ident t
-    TyTuple _ _ ts            -> any (hasIdent ident) ts
-    TyApp _ t1 t2             -> hasIdent ident t1 || hasIdent ident t2
-    TyCon _ qname             -> getFromQName qname == ident
+hasIdent :: DeclHead SrcSpanInfo -> Type SrcSpanInfo -> Bool
+hasIdent gadtHead ty = case ty of
+    TyForall _ _ _ t          -> hasIdent gadtHead t
+    TyParen _ t               -> hasIdent gadtHead t
+    TyList _ t                -> hasIdent gadtHead t
+    TyTuple _ _ ts            -> any (hasIdent gadtHead) ts
+    TyApp _ t1 t2             -> hasIdent gadtHead t1 || hasIdent gadtHead t2
+    TyCon _ qname             -> (getFromQName qname) == (getHeadName gadtHead)
+    TyVar _ name              -> elem (getFromName name) (getTypeVariablesHead gadtHead)
     _                         -> False
 
-isValid :: (String -> Type SrcSpanInfo -> Maybe [TypeErrorDetail])
-            -> String
+
+        -- getHeadName
+        -- getTypeVariablesHead
+
+isValid :: (DeclHead SrcSpanInfo -> Type SrcSpanInfo -> Maybe [TypeErrorDetail])
+            -> DeclHead SrcSpanInfo
             -> Type SrcSpanInfo
             -> Maybe [TypeErrorDetail]
-isValid handle ident ty = case ty of
-    TyFun _ _ _               -> handle ident ty
-    TyParen _ t               -> isValid handle ident t
-    TyList _ t                -> isValid handle ident t
-    TyTuple _ _ ts            -> mergeAndAddParent ty $ map (isValid handle ident) ts
+isValid handle gadtHead ty = case ty of
+    TyFun _ _ _               -> handle gadtHead ty
+    TyParen _ t               -> isValid handle gadtHead t
+    TyList _ t                -> isValid handle gadtHead t
+    TyTuple _ _ ts            -> mergeAndAddParent ty $ map (isValid handle gadtHead) ts
     _                         -> Nothing
 
 getParts :: Type SrcSpanInfo -> [Type SrcSpanInfo]
